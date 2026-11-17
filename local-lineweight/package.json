@@ -1,0 +1,52 @@
+{
+  "name": "local-lineweight",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "dsh": ">=0.2.1-rc.2 <0.3.0-0"
+  },
+  "dshGo": {
+    "v": 1,
+    "title": {
+      "zh": "线稿",
+      "en": "LineWeight"
+    },
+    "icon": "palette",
+    "wants": [],
+    "contributes": {
+      "composer.tools": [
+        {
+          "id": "lineweight-tool",
+          "label": {
+            "zh": "线稿",
+            "en": "Line"
+          },
+          "icon": "palette",
+          "panel": "lineweight"
+        }
+      ],
+      "panels": [
+        {
+          "id": "lineweight",
+          "title": {
+            "zh": "线稿",
+            "en": "LineWeight"
+          },
+          "icon": "palette",
+          "placement": [
+            "features",
+            "session.tab",
+            "chat.panel"
+          ]
+        }
+      ]
+    }
+  }
+}

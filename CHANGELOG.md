@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.6.0 - 2026-11-16
+
+- Add `local-lineweight`: LineWeight panel for weighted vector linework and `--fit` measurement.
+
 ## v0.5.0 - 2026-11-16
 
 - Add `local-ichiwatashi`: pixel-art measurement panel calling Ichiwatashi's judge.

@@ -19,6 +19,7 @@ dsh-go useful plugin bundle：一组本地 dsh-go 原生插件，给手机 App �
 | `local-asc` | Aragami 审计：Tor/Firefox 静态姿态审计面板 | Aragami-SilentCrystal 仓库 |
 | `local-ichiwatashi` | 像素测量：Ichiwatashi 的像素画质量报告 | Ichiwatashi 仓库 + Python |
 | `local-volcano` | 宿主观察：进程、负载、内存、磁盘 | 无 |
+| `local-lineweight` | 线稿：LineWeight 生成带笔压的矢量线稿 | LineWeight 仓库 + Python |
 
 ## 安装
 
