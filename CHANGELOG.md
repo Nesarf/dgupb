@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.7.0 - 2026-11-16
+
+- Merge VML (Vtuber's Monitor Link) service control into `local-asc`: start/stop the local
+  monitor service and show its state next to the Aragami audit.
+
 ## v0.6.0 - 2026-11-16
 
 - Add `local-lineweight`: LineWeight panel for weighted vector linework and `--fit` measurement.

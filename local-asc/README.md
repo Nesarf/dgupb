@@ -1,10 +1,20 @@
 # local-asc
 
-Aragami 审计面板：在引擎侧调用 [Aragami-SilentCrystal](https://github.com/Nesarf/Aragami-SilentCrystal)
-的只读静态审计工具，展示环境与检查面。
+审计与监控面板，合并两个本地工具：
 
-- 面板显示运行模式、Tor Browser 安装数、Firefox profile 数、检查项数；
-- 按钮“运行审计”和“版本检查”会把 CLI 输出插入输入框（截断到 4000 字）；
-- 工具目录默认找 `/root/workspace/Aragami-SilentCrystal`，也可以用环境变量 `ARAGAMI_DIR` 指定。
+## Aragami 审计
 
-只读：面板不写文件、不启动 Tor、不改配置。
+在引擎侧调用 [Aragami-SilentCrystal](https://github.com/Nesarf/Aragami-SilentCrystal)
+的只读静态审计：显示运行模式、Tor Browser 安装数、Firefox profile 数、检查面项数；
+「运行审计」和「版本检查」把 CLI 输出插入输入框。
+
+## VML 监控
+
+[Vtuber's Monitor Link](https://github.com/Nesarf/VtuberMonitorLink) 的本地服务管理：
+
+- 显示服务状态（监听 127.0.0.1:43110）、配置是否已保存、访问地址；
+- 「启动 VML」：后台启动 `node server/src/index.js`（NO_OPEN=1，不自动开浏览器）；
+- 「停止 VML」：结束该服务进程。
+
+服务依赖在 `/root/workspace/VtuberMonitorLink/server/node_modules`（已 npm install）。
+VML 的网页界面打开 http://127.0.0.1:43110 使用。
