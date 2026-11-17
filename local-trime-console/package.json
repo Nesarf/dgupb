@@ -1,0 +1,52 @@
+{
+  "name": "local-trime-console",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "dsh": ">=0.2.1-rc.2 <0.3.0-0"
+  },
+  "dshGo": {
+    "v": 1,
+    "title": {
+      "zh": "同文控制台",
+      "en": "Trime Console"
+    },
+    "icon": "text",
+    "wants": [],
+    "contributes": {
+      "composer.tools": [
+        {
+          "id": "trime-panel",
+          "label": {
+            "zh": "同文",
+            "en": "Trime"
+          },
+          "icon": "text",
+          "panel": "trime"
+        }
+      ],
+      "panels": [
+        {
+          "id": "trime",
+          "title": {
+            "zh": "同文控制台",
+            "en": "Trime Console"
+          },
+          "icon": "text",
+          "placement": [
+            "features",
+            "session.tab",
+            "chat.panel"
+          ]
+        }
+      ]
+    }
+  }
+}

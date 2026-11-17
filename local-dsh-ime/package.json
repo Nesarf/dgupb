@@ -1,0 +1,55 @@
+{
+  "name": "local-dsh-ime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "dsh": ">=0.2.1-rc.2 <0.3.0-0"
+  },
+  "dshGo": {
+    "v": 1,
+    "title": {
+      "zh": "DSH 输入法",
+      "en": "DSH IME"
+    },
+    "icon": "text",
+    "wants": [
+      "clipboard",
+      "draft"
+    ],
+    "contributes": {
+      "composer.tools": [
+        {
+          "id": "char-table",
+          "label": {
+            "zh": "字符表",
+            "en": "Chars"
+          },
+          "icon": "text",
+          "panel": "chars"
+        }
+      ],
+      "panels": [
+        {
+          "id": "chars",
+          "title": {
+            "zh": "DSH 输入法",
+            "en": "DSH IME"
+          },
+          "icon": "text",
+          "placement": [
+            "features",
+            "session.tab",
+            "chat.panel"
+          ]
+        }
+      ]
+    }
+  }
+}
