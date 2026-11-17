@@ -69,7 +69,7 @@ function portListening(port) {
 function vmlReady() {
   try {
     fs.accessSync(VML_DIR + '/server/src/index.js', fs.constants.R_OK)
-    fs.accessSync(VML_DIR + '/server/node_modules', fs.constants.R_OK)
+    fs.accessSync(VML_DIR + '/node_modules', fs.constants.R_OK)
     return true
   } catch {
     return false
