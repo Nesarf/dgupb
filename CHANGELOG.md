@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.5.0 - 2026-11-16
+
+- Add `local-ichiwatashi`: pixel-art measurement panel calling Ichiwatashi's judge.
+- Add `local-volcano`: host observer panel (processes, load, memory, disk).
+
 ## v0.4.0 - 2026-11-16
 
 - Add `local-asc`: Aragami-SilentCrystal panel for Tor Browser / Firefox static posture audit.

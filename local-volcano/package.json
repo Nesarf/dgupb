@@ -1,0 +1,52 @@
+{
+  "name": "local-volcano",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "dsh": ">=0.2.1-rc.2 <0.3.0-0"
+  },
+  "dshGo": {
+    "v": 1,
+    "title": {
+      "zh": "宿主观察",
+      "en": "Host Observer"
+    },
+    "icon": "chart",
+    "wants": [],
+    "contributes": {
+      "composer.tools": [
+        {
+          "id": "volcano-tool",
+          "label": {
+            "zh": "观察",
+            "en": "Watch"
+          },
+          "icon": "chart",
+          "panel": "volcano"
+        }
+      ],
+      "panels": [
+        {
+          "id": "volcano",
+          "title": {
+            "zh": "宿主观察",
+            "en": "Host Observer"
+          },
+          "icon": "chart",
+          "placement": [
+            "features",
+            "session.tab",
+            "chat.panel"
+          ]
+        }
+      ]
+    }
+  }
+}

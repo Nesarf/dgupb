@@ -1,0 +1,52 @@
+{
+  "name": "local-ichiwatashi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "dsh": ">=0.2.1-rc.2 <0.3.0-0"
+  },
+  "dshGo": {
+    "v": 1,
+    "title": {
+      "zh": "像素测量",
+      "en": "Pixel Judge"
+    },
+    "icon": "image",
+    "wants": [],
+    "contributes": {
+      "composer.tools": [
+        {
+          "id": "ichiwatashi-tool",
+          "label": {
+            "zh": "像素",
+            "en": "Pixels"
+          },
+          "icon": "image",
+          "panel": "ichiwatashi"
+        }
+      ],
+      "panels": [
+        {
+          "id": "ichiwatashi",
+          "title": {
+            "zh": "像素测量",
+            "en": "Pixel Judge"
+          },
+          "icon": "image",
+          "placement": [
+            "features",
+            "session.tab",
+            "chat.panel"
+          ]
+        }
+      ]
+    }
+  }
+}
