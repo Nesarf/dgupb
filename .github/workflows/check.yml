@@ -1,0 +1,24 @@
+name: check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: syntax check plugin entry points
+        run: |
+          for f in local-*/lib/index.js; do
+            node --check "$f"
+          done
+      - name: validate plugin manifests
+        run: |
+          for f in local-*/package.json; do
+            node -e "const p=require('./'+process.argv[1]); if(!p.dshGo||!p.dshGo.contributes) {console.error('missing dshGo manifest: '+process.argv[1]); process.exit(1)}" "$f"
+          done

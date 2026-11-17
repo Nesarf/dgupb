@@ -1,0 +1,52 @@
+{
+  "name": "local-code-point",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "dsh": ">=0.2.1-rc.2 <0.3.0-0"
+  },
+  "dshGo": {
+    "v": 1,
+    "title": {
+      "zh": "码点工具",
+      "en": "Code Points"
+    },
+    "icon": "code",
+    "wants": [],
+    "contributes": {
+      "composer.tools": [
+        {
+          "id": "code-point-tool",
+          "label": {
+            "zh": "码点",
+            "en": "Codes"
+          },
+          "icon": "code",
+          "panel": "code-point"
+        }
+      ],
+      "panels": [
+        {
+          "id": "code-point",
+          "title": {
+            "zh": "码点工具",
+            "en": "Code Points"
+          },
+          "icon": "code",
+          "placement": [
+            "features",
+            "session.tab",
+            "chat.panel"
+          ]
+        }
+      ]
+    }
+  }
+}

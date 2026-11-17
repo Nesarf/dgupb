@@ -1,0 +1,52 @@
+{
+  "name": "local-phone-status",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "dsh": ">=0.2.1-rc.2 <0.3.0-0"
+  },
+  "dshGo": {
+    "v": 1,
+    "title": {
+      "zh": "手机状态",
+      "en": "Phone Status"
+    },
+    "icon": "chart",
+    "wants": [],
+    "contributes": {
+      "composer.tools": [
+        {
+          "id": "phone-status-tool",
+          "label": {
+            "zh": "状态",
+            "en": "Status"
+          },
+          "icon": "chart",
+          "panel": "phone-status"
+        }
+      ],
+      "panels": [
+        {
+          "id": "phone-status",
+          "title": {
+            "zh": "手机状态",
+            "en": "Phone Status"
+          },
+          "icon": "chart",
+          "placement": [
+            "features",
+            "session.tab",
+            "chat.panel"
+          ]
+        }
+      ]
+    }
+  }
+}
