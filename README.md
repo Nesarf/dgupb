@@ -1,5 +1,7 @@
 # dgupb
 
+<img src="assets/icon.jpg" alt="dgupb" width="160">
+
 dsh-go useful plugin bundle，一组本地 dsh-go 原生插件（手机 App 界面里的胶囊、面板、加号工具）。
 
 ## 插件
