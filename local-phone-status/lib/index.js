@@ -70,7 +70,7 @@ export function apply(ctx) {
           batteryNote: battery && battery.plugged ? '正在充电' : '电池数据来自 Termux:API',
           temp: battery && battery.temperature != null ? battery.temperature + ' 度' : '未知',
           state: battery ? String(battery.status || '') : '未知',
-          wifi: wifi && wifi.ssid ? wifi.ssid : (wifi ? '未连接' : '读取失败'),
+          wifi: wifi && wifi.ssid && wifi.ssid !== '<unknown ssid>' ? wifi.ssid : (wifi ? '未连接' : '读取失败'),
           storage: storage ? fmtGB(storage.free) + ' 可用 / ' + fmtGB(storage.total) : '未知',
           bridge: battery || wifi ? '正常' : '断开',
           note: '每打开一次面板会重新读取；Termux 桥断开时只有存储可用。',
