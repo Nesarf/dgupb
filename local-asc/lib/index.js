@@ -76,6 +76,59 @@ function vmlReady() {
   }
 }
 
+function vmlApi(method, path, body) {
+  try {
+    const args = ['-s', '--max-time', '12', '-X', method]
+    if (body !== undefined) {
+      const tmp = '/tmp/vml-body-' + process.pid + '.json'
+      fs.writeFileSync(tmp, JSON.stringify(body))
+      args.push('-H', 'Content-Type: application/json', '--data-binary', '@' + tmp)
+    }
+    args.push('http://127.0.0.1:' + VML_PORT + path)
+    const out = execFileSync('curl', args, { timeout: 15000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+    return out ? JSON.parse(out) : null
+  } catch {
+    return null
+  }
+}
+
+function vmlLlmInfo() {
+  const cfg = vmlApi('GET', '/api/config')
+  if (!cfg || !cfg.llm) return null
+  return {
+    provider: cfg.llm.provider || '-',
+    model: cfg.llm.model || '-',
+    hasKey: Boolean(cfg.llm.hasApiKey),
+    profiles: Array.isArray(cfg.llm.providers) ? cfg.llm.providers.length : 0,
+  }
+}
+
+function extractKey(text) {
+  const trimmed = String(text || '').trim()
+  const m = trimmed.match(/sk-[A-Za-z0-9_\-]{10,}/)
+  if (m) return m[0]
+  if (/^[A-Za-z0-9_\-]{20,}$/.test(trimmed)) return trimmed
+  return null
+}
+
+function setVmlApiKey(key) {
+  const cfg = vmlApi('GET', '/api/config')
+  if (!cfg) return { ok: false, message: 'VML 服务未运行' }
+  cfg.llm = cfg.llm || {}
+  cfg.llm.apiKey = key
+  if (Array.isArray(cfg.llm.providers) && cfg.llm.providers.length > 0) {
+    const active = cfg.llm.providers.find((x) => x && x.id === cfg.llm.activeId) || cfg.llm.providers[0]
+    if (active) active.apiKey = key
+  }
+  delete cfg.llm.hasApiKey
+  const out = vmlApi('PUT', '/api/config', cfg)
+  return out ? { ok: true } : { ok: false, message: '写入失败' }
+}
+
+function testVmlLlm() {
+  return vmlApi('POST', '/api/llm/test', { provider: {} })
+}
+
 function vmlConfig() {
   try {
     const stat = fs.statSync(VML_DIR + '/config.json')
@@ -110,7 +163,17 @@ export function apply(ctx) {
               { label: '配置', value: { $: 'data.vmlConf' } },
               { label: '地址', value: { $: 'data.vmlUrl' } },
             ] },
+            { type: 'text', text: 'VML LLM', tone: 'muted' },
+            { type: 'keyValue', items: [
+              { label: 'Provider', value: { $: 'data.llmProvider' } },
+              { label: 'Model', value: { $: 'data.llmModel' } },
+              { label: 'API Key', value: { $: 'data.llmKey' } },
+            ] },
             { type: 'text', text: { $: 'data.note' }, tone: 'muted' },
+            { type: 'actions', items: [
+              { label: '剪贴板设 Key', action: 'vml-set-key' },
+              { label: '测试 LLM', action: 'vml-test' },
+            ] },
             { type: 'actions', items: [
               { label: '启动 VML', action: 'vml-start' },
               { label: '停止 VML', action: 'vml-stop' },
@@ -138,7 +201,11 @@ export function apply(ctx) {
           firefox = ffCount !== null ? ffCount + ' 个 profile' : '未知'
         }
         const running = portListening(VML_PORT)
+        const llm = vmlLlmInfo()
         emit({
+          llmProvider: llm ? llm.provider : '（服务未运行）',
+          llmModel: llm ? llm.model + (llm.profiles ? ' · ' + llm.profiles + ' 个 profile' : '') : '-',
+          llmKey: llm ? (llm.hasKey ? '已设置' : '未设置') : '-',
           checks,
           catalog: '只读静态检查面',
           env,
@@ -166,6 +233,18 @@ export function apply(ctx) {
           const text = runCli(dir, ['aragami_version', '--human'], 20000)
           if (!text) return { toast: '版本检查失败' }
           return { insert: text.slice(0, 4000) }
+        },
+        'vml-set-key': (scope, event) => {
+          const key = extractKey(scope.clipboard)
+          if (!key) return { toast: '剪贴板里没找到 API key（先复制 key 再点）' }
+          const r = setVmlApiKey(key)
+          return r.ok ? { toast: '已保存 API key（' + key.slice(0, 6) + '...）' } : { toast: r.message || '保存失败' }
+        },
+        'vml-test': () => {
+          const r = testVmlLlm()
+          if (!r) return { toast: 'VML 服务未运行' }
+          const text = JSON.stringify(r).slice(0, 300)
+          return { toast: (r.ok ? '连接正常 ' : '测试失败 ') + text }
         },
         'vml-start': () => {
           if (portListening(VML_PORT)) return { toast: 'VML 已经在运行' }

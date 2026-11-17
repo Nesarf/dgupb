@@ -18,3 +18,10 @@
 
 服务依赖在 `/root/workspace/VtuberMonitorLink/server/node_modules`（已 npm install）。
 VML 的网页界面打开 http://127.0.0.1:43110 使用。
+
+## VML LLM 设置
+
+- 显示当前 provider / model / API key 是否已设置；
+- 「剪贴板设 Key」：先复制 API key，再点按钮，会通过 `PUT /api/config` 写入 VML 配置；
+- 「测试 LLM」：调用 `POST /api/llm/test` 检查连接。
+

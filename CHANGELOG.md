@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.8.0 - 2026-11-16
+
+- `local-asc`: add VML LLM settings block (provider/model/key state, set key from clipboard,
+  test connection) so the monitor's LLM can be configured from dsh-go.
+
 ## v0.7.0 - 2026-11-16
 
 - Merge VML (Vtuber's Monitor Link) service control into `local-asc`: start/stop the local
