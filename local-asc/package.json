@@ -1,0 +1,52 @@
+{
+  "name": "local-asc",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "dsh": ">=0.2.1-rc.2 <0.3.0-0"
+  },
+  "dshGo": {
+    "v": 1,
+    "title": {
+      "zh": "Aragami 审计",
+      "en": "Aragami Audit"
+    },
+    "icon": "search",
+    "wants": [],
+    "contributes": {
+      "composer.tools": [
+        {
+          "id": "asc-tool",
+          "label": {
+            "zh": "审计",
+            "en": "Audit"
+          },
+          "icon": "search",
+          "panel": "asc"
+        }
+      ],
+      "panels": [
+        {
+          "id": "asc",
+          "title": {
+            "zh": "Aragami 审计",
+            "en": "Aragami Audit"
+          },
+          "icon": "search",
+          "placement": [
+            "features",
+            "session.tab",
+            "chat.panel"
+          ]
+        }
+      ]
+    }
+  }
+}

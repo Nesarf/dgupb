@@ -16,6 +16,7 @@ dsh-go useful plugin bundle：一组本地 dsh-go 原生插件，给手机 App �
 | `local-code-point` | 码点工具：剪贴板文字转 Unicode 码点 | 剪贴板权限 |
 | `local-mega` | Mim 索引：mega-index-map 的 Library 统计 | 无 |
 | `local-shell` | 宿主环境：引擎机器的内存、负载、磁盘 | 无 |
+| `local-asc` | Aragami 审计：Tor/Firefox 静态姿态审计面板 | Aragami-SilentCrystal 仓库 |
 
 ## 安装
 

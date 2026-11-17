@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.4.0 - 2026-11-16
+
+- Add `local-asc`: Aragami-SilentCrystal panel for Tor Browser / Firefox static posture audit.
+
 ## v0.3.0 - 2026-11-16
 
 - Add `local-mega`: Mim index panel for mega-index-map Library statistics.
