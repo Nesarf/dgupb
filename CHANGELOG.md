@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.0 - 2026-11-16
+
+- Add `local-mega`: Mim index panel for mega-index-map Library statistics.
+- Add `local-shell`: host environment panel (memory, load, disk, node).
+
 ## v0.2.0 - 2026-11-16
 
 - Add `local-snippets`: quick text snippet panel with user template file.

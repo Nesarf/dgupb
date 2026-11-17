@@ -1,0 +1,52 @@
+{
+  "name": "local-shell",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "dsh": ">=0.2.1-rc.2 <0.3.0-0"
+  },
+  "dshGo": {
+    "v": 1,
+    "title": {
+      "zh": "宿主环境",
+      "en": "Host Shell"
+    },
+    "icon": "terminal",
+    "wants": [],
+    "contributes": {
+      "composer.tools": [
+        {
+          "id": "host-tool",
+          "label": {
+            "zh": "宿主",
+            "en": "Host"
+          },
+          "icon": "terminal",
+          "panel": "host"
+        }
+      ],
+      "panels": [
+        {
+          "id": "host",
+          "title": {
+            "zh": "宿主环境",
+            "en": "Host Shell"
+          },
+          "icon": "terminal",
+          "placement": [
+            "features",
+            "session.tab",
+            "chat.panel"
+          ]
+        }
+      ]
+    }
+  }
+}

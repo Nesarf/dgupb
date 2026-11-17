@@ -14,6 +14,8 @@ dsh-go useful plugin bundle：一组本地 dsh-go 原生插件，给手机 App �
 | `local-snippets` | 快捷文本：内置加自定义模板，点一下插入 | 无 |
 | `local-phone-status` | 手机状态：电池、温度、Wi-Fi、存储 | Termux 桥（存储不依赖） |
 | `local-code-point` | 码点工具：剪贴板文字转 Unicode 码点 | 剪贴板权限 |
+| `local-mega` | Mim 索引：mega-index-map 的 Library 统计 | 无 |
+| `local-shell` | 宿主环境：引擎机器的内存、负载、磁盘 | 无 |
 
 ## 安装
 

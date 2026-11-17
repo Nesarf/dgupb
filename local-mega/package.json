@@ -1,0 +1,52 @@
+{
+  "name": "local-mega",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "dsh": ">=0.2.1-rc.2 <0.3.0-0"
+  },
+  "dshGo": {
+    "v": 1,
+    "title": {
+      "zh": "Mim 索引",
+      "en": "Mim Index"
+    },
+    "icon": "storage",
+    "wants": [],
+    "contributes": {
+      "composer.tools": [
+        {
+          "id": "mega-tool",
+          "label": {
+            "zh": "索引",
+            "en": "Index"
+          },
+          "icon": "storage",
+          "panel": "mega"
+        }
+      ],
+      "panels": [
+        {
+          "id": "mega",
+          "title": {
+            "zh": "Mim 索引",
+            "en": "Mim Index"
+          },
+          "icon": "storage",
+          "placement": [
+            "features",
+            "session.tab",
+            "chat.panel"
+          ]
+        }
+      ]
+    }
+  }
+}
