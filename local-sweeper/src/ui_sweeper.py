@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 """扫雷 · 形状提示版（tkinter 窗口）"""
 import sys, time, random
-sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
+sys.path.insert(0, "/root/workspace")
 import tkinter as tk
 from tkinter import ttk
-from sweeper_core import B, SHAPES, DISP
+from hint_research import B, SHAPES, DISP
 
 BG = "#e8eef4"
 HID = "#c8d6e3"
@@ -53,6 +53,7 @@ class App:
         self.canvas.pack(fill="both", expand=True, padx=8, pady=4)
         self.canvas.bind("<Button-1>", self.on_left)
         self.canvas.bind("<Button-3>", self.on_right)
+        self.canvas.bind("<Double-Button-1>", self.on_double)
 
         self.new_game(16, 30, 100)
         root.geometry("%dx%d" % (self.cols * self.cell + 24, self.rows * self.cell + 70))
@@ -117,6 +118,29 @@ class App:
         p = self.cell_at(e.x, e.y)
         if p and not self.dead:
             self.toggle_flag_at(p)
+
+    def on_double(self, e):
+        p = self.cell_at(e.x, e.y)
+        if not p or self.dead:
+            return
+        r, c = p
+        if (r, c) not in self.b.revealed:
+            return
+        v = self.b.num(r, c)
+        if v == 0:
+            return
+        nbrs = self.b.nb(r, c)
+        if sum(1 for q in nbrs if q in self.flags) != v:
+            return
+        for q in nbrs:
+            if q not in self.b.revealed and q not in self.flags:
+                self.b.open(*q)
+        if self.b.dead:
+            self.dead = True
+            self.running = False
+        elif len(self.b.revealed) == self.rows * self.cols - self.mines:
+            self.running = False
+        self.draw()
 
     def toggle_flag_at(self, p):
         r, c = p

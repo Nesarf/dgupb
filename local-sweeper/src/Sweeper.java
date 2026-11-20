@@ -5,6 +5,7 @@ import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.io.File;
 import java.util.*;
+import java.util.prefs.Preferences;
 
 public class Sweeper extends JFrame {
     static final Map<String,int[]> SHAPES = new LinkedHashMap<>();
@@ -260,6 +261,7 @@ public class Sweeper extends JFrame {
     final JLabel timeLabel = new JLabel("00:00");
     final JCheckBox hintBox = new JCheckBox("显示形状提示", true);
     int seconds = 0; boolean running = false;
+    long startedAt = 0; int highlight = -1;
     final javax.swing.Timer clock;
 
     public Sweeper() {
@@ -287,6 +289,9 @@ public class Sweeper extends JFrame {
         bar.addSeparator();
         bar.add(hintBox);
         hintBox.addActionListener(e -> panel.repaint());
+        JButton hb = new JButton("提示");
+        hb.addActionListener(e -> showHint());
+        bar.add(hb);
         bar.add(Box.createHorizontalGlue());
         bar.add(mineLabel);
         bar.addSeparator();
@@ -296,8 +301,11 @@ public class Sweeper extends JFrame {
         add(panel, BorderLayout.CENTER);
         add(status, BorderLayout.SOUTH);
 
-        clock = new javax.swing.Timer(1000, e -> {
-            if (running) { seconds++; timeLabel.setText(String.format("%02d:%02d", seconds/60, seconds%60)); }
+        clock = new javax.swing.Timer(100, e -> {
+            if (running) {
+                long ms = System.currentTimeMillis() - startedAt;
+                timeLabel.setText(String.format("%.1fs", ms / 1000.0));
+            }
         });
         clock.start();
 
@@ -308,8 +316,9 @@ public class Sweeper extends JFrame {
 
     void start(int rows, int cols, int mines) {
         R = rows; C = cols; M = mines;
-        seconds = 0; running = true;
-        timeLabel.setText("00:00");
+        seconds = 0; running = true; highlight = -1;
+        startedAt = System.currentTimeMillis();
+        timeLabel.setText("0.0s");
         if (!newGame(rows, cols, mines, new Random().nextInt(1 << 20))) status.setText(" 生成失败，请再按新局");
         else status.setText(" 左键翻开 · 右键插旗");
         panel.relayout();
@@ -318,12 +327,49 @@ public class Sweeper extends JFrame {
     }
     void startAgain() { start(R, C, M); }
 
+    String bestKey(){ return "best_" + R + "x" + C + "_" + M; }
+    double bestSeconds(){
+        try { return Preferences.userNodeForPackage(Sweeper.class).getDouble(bestKey(), 0); }
+        catch (Exception e) { return 0; }
+    }
+    void saveBest(double v){
+        try { Preferences.userNodeForPackage(Sweeper.class).putDouble(bestKey(), v); }
+        catch (Exception e) { }
+    }
+
+    void showHint() {
+        if (board == null || board.dead) return;
+        for (Hint h : hints) {
+            if (!board.rev[h.i]) continue;
+            boolean useful = false;
+            for (int p : board.shapeCells(h.i, h.key))
+                if (!board.rev[p] && !board.flag[p]) useful = true;
+            if (!useful) continue;
+            highlight = h.i;
+            panel.repaint();
+            javax.swing.Timer t = new javax.swing.Timer(2400, ev -> { highlight = -1; panel.repaint(); });
+            t.setRepeats(false);
+            t.start();
+            status.setText(" 提示：R" + (h.i / C + 1) + "C" + (h.i % C + 1) + " 的 " + DISP.get(h.key) + h.lb
+                    + "（该形状里至少 " + h.lb + " 颗雷）");
+            return;
+        }
+        status.setText(" 当前没有可用的形状提示");
+    }
+
     void updateCounters() {
         int flags = 0;
         for (int i = 0; i < R*C; i++) if (board.flag[i]) flags++;
         mineLabel.setText("剩余雷 " + (M - flags) + "  ");
         if (board.dead) { status.setText(" 踩到雷了 —— 按新局再来"); running = false; }
-        else if (board.revCount() == R*C - M) { status.setText(" 清完了 用时 " + seconds + " 秒"); running = false; }
+        else if (board.revCount() == R*C - M) {
+            double sec = (System.currentTimeMillis() - startedAt) / 1000.0;
+            double prev = bestSeconds();
+            double best = (prev <= 0 || sec < prev) ? sec : prev;
+            if (prev <= 0 || sec < prev) saveBest(sec);
+            status.setText(String.format(" 清完了 —— %.1f 秒（最佳 %.1f 秒，%d 条提示）", sec, best, hints.size()));
+            running = false;
+        }
     }
 
     class BoardPanel extends JPanel {
@@ -332,6 +378,12 @@ public class Sweeper extends JFrame {
             setBackground(new Color(0xE9EEF3));
             addMouseListener(new MouseAdapter() {
                 public void mousePressed(MouseEvent e) { hit(e); }
+                public void mouseClicked(MouseEvent e) {
+                    if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
+                        int c = (e.getX() - pad) / cell, r = (e.getY() - pad) / cell;
+                        if (board != null && board.inside(r, c)) chord(board.I(r, c));
+                    }
+                }
             });
         }
         void relayout() {
@@ -339,6 +391,18 @@ public class Sweeper extends JFrame {
             cell = Math.max(18, Math.min(34, cw));
             setPreferredSize(new Dimension(C*cell + 2*pad, R*cell + 2*pad));
             revalidate();
+        }
+        void chord(int i) {
+            if (board == null || board.dead || !board.rev[i]) return;
+            int v = board.num(i);
+            if (v == 0) return;
+            int flags = 0;
+            for (int p : board.nbs(i)) if (board.flag[p]) flags++;
+            if (flags != v) return;
+            for (int p : board.nbs(i)) if (!board.rev[p] && !board.flag[p]) board.open(p);
+            if (board.revCount() == R*C - M)
+                for (int k = 0; k < R*C; k++) if (board.mine[k]) board.flag[k] = true;
+            repaint(); updateCounters();
         }
         void hit(MouseEvent e) {
             if (board == null) return;
@@ -395,6 +459,12 @@ public class Sweeper extends JFrame {
                 }
             }
             if (hintBox.isSelected()) drawHints(g);
+            if (highlight >= 0) {
+                int hr = highlight / C, hc = highlight % C;
+                g.setColor(new Color(0xFFB300));
+                g.setStroke(new BasicStroke(2.6f));
+                g.drawRect(pad + hc*cell + 1, pad + hr*cell + 1, cell - 2, cell - 2);
+            }
             if (board.dead) {
                 g.setColor(new Color(0x00000022));
                 g.fillRect(0, 0, getWidth(), getHeight());
