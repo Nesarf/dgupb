@@ -39,7 +39,7 @@ public class Sweeper extends JFrame {
         SHAPES.put("gt",new int[]{2,5,7});        DISP.put("gt","〉");
     }
 
-    static class Hint { int i; String key; int lb, n; }
+    static class Hint { int i; String key; int lb, n; boolean exact = true; }
 
     static class Board {
         int R, C, M, seed;
@@ -187,6 +187,35 @@ public class Sweeper extends JFrame {
         }
         boolean has(boolean[] a){ for (boolean b : a) if (b) return true; return false; }
 
+        ArrayList<Hint> weakHints() {
+            ArrayList<Hint> out = new ArrayList<>();
+            for (int q = 0; q < R*C; q++) {
+                if (!rev[q] || num(q) == 0) continue;
+                int base = rest(q);
+                Hint best = null; int bestScore = Integer.MIN_VALUE;
+                for (String key : SHAPES.keySet()) {
+                    ArrayList<Integer> cells = shapeCells(q, key);
+                    HashSet<Integer> set = new HashSet<>(cells);
+                    int un = 0;
+                    for (int p : cells) if (unk(p)) un++;
+                    if (un == 0) continue;
+                    int outside = 0;
+                    for (int p : nbs(q)) if (!set.contains(p) && unk(p)) outside++;
+                    int lb = Math.max(0, base - outside);
+                    if (lb >= 1 && lb < un) {
+                        int score = lb * 10 - un;
+                        if (score > bestScore) {
+                            bestScore = score;
+                            best = new Hint();
+                            best.i = q; best.key = key; best.lb = lb; best.n = un; best.exact = false;
+                        }
+                    }
+                }
+                if (best != null) out.add(best);
+            }
+            return out;
+        }
+
         ArrayList<Hint> candidates() {
             ArrayList<Hint> out = new ArrayList<>();
             for (int q = 0; q < R*C; q++) {
@@ -220,7 +249,7 @@ public class Sweeper extends JFrame {
     }
 
     // ---------- 生成 ----------
-    static Board board; static ArrayList<Hint> hints = new ArrayList<>(); static boolean[] snapshot;
+    static Board board; static ArrayList<Hint> hints = new ArrayList<>(); static ArrayList<Hint> weak = new ArrayList<>(); static boolean[] snapshot;
     static int R = 16, C = 30, M = 100;
     static String mode = "高级 16×30 · 100 雷";
 
@@ -250,6 +279,7 @@ public class Sweeper extends JFrame {
             Arrays.fill(board.known, false);
             for (int i = 0; i < R*C; i++) { board.flag[i] = false; board.num[i] = -1; }
             board.dead = false;
+            weak = board.weakHints();
             return true;
         }
         return false;
@@ -472,6 +502,18 @@ public class Sweeper extends JFrame {
         }
         void drawHints(Graphics2D g) {
             g.setFont(smallFont);
+            FontMetrics fmw = g.getFontMetrics();
+            for (Hint h : weak) {
+                if (!board.rev[h.i]) continue;
+                boolean any = false;
+                for (int p : board.shapeCells(h.i, h.key)) if (!board.rev[p]) any = true;
+                if (!any) continue;
+                int r = h.i / C, c = h.i % C;
+                int x = pad + c*cell, y = pad + r*cell;
+                String txt = DISP.get(h.key) + h.lb;
+                g.setColor(new Color(0xB0, 0x6A, 0x00));
+                g.drawString(txt, x + cell - 3 - fmw.stringWidth(txt), y + 11);
+            }
             for (Hint h : hints) {
                 if (!board.rev[h.i]) continue;
                 ArrayList<Integer> cells = new ArrayList<>();

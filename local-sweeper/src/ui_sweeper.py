@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 """扫雷 · 形状提示版（tkinter 窗口）"""
 import sys, time, random
-sys.path.insert(0, "/root/workspace")
+sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
 import tkinter as tk
 from tkinter import ttk
-from hint_research import B, SHAPES, DISP
+from sweeper_core import B, SHAPES, DISP
 
 BG = "#e8eef4"
 HID = "#c8d6e3"
@@ -87,6 +87,7 @@ class App:
         b.dead = False
         self.b = b
         self.hints = hints
+        self.weak = b.weak_hints()
         self.flags = set()
         self.dead = False
         self.running = True
@@ -195,6 +196,16 @@ class App:
                                           fill="#d64045", outline="")
                         cv.create_line(cx - 7, cy - 9, cx - 7, cy + 11, fill="#6b7a88", width=2)
         if self.show_hints.get():
+            for (q, sym, ids, lb, _exact) in self.weak:
+                r, c = q
+                if (r, c) not in self.b.revealed:
+                    continue
+                if not any(p not in self.b.revealed for p in self.b.shape_cells(q, ids)):
+                    continue
+                x0, y0 = c * s, r * s
+                cv.create_text(x0 + s - 3, y0 + 3, text=DISP.get(sym, sym) + str(lb),
+                               anchor="ne", fill="#b06a00",
+                               font=("Noto Sans CJK SC", max(7, int(s * 0.27))))
             for (q, sym, ids, lb) in self.hints:
                 r, c = q
                 if (r, c) not in self.b.revealed:

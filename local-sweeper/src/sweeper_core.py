@@ -115,6 +115,30 @@ class B:
             if not self.step(hints): return False
         return False
 
+    def weak_hints(self):
+        """每个已开数字格挑一条「至少 n 颗」的弱提示（非精确），只用于显示。"""
+        out = []
+        for q in self.revealed:
+            v = self.num(*q)
+            if v == 0:
+                continue
+            base = self.rest(q)
+            best = None
+            for sym, ids in SHAPES.items():
+                cells = self.shape_cells(q, ids)
+                unk = [p for p in cells if self.unk(p)]
+                if not unk:
+                    continue
+                outside = sum(1 for p in self.nb(*q) if p not in cells and self.unk(p))
+                lb = max(0, base - outside)
+                if 1 <= lb < len(unk):
+                    key = (-lb, len(unk))
+                    if best is None or key < best[0]:
+                        best = (key, sym, ids, lb)
+            if best:
+                out.append((q, best[1], best[2], best[3], False))
+        return out
+
     def candidates(self):
         out = []
         for q in self.revealed:
