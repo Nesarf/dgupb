@@ -1,6 +1,6 @@
-// 扫雷：每打开一次面板生成一局，棋盘用字符画显示。
-// 完整可玩版本在 src/：Sweeper.java（Swing）与 ui_sweeper.py（tkinter）。
-import { build } from './core.js'
+// 扫雷面板：与网页版同一套生成与提示逻辑（lib/core.js）。
+// 面板只做展示：发一局 9×9，画字符盘，报提示条数。
+import { build, shapeHints, DISP } from './core.js'
 
 export const name = 'local-sweeper'
 
@@ -8,15 +8,14 @@ let seed = Math.floor(Date.now() % 100000)
 
 function render(board) {
   const rows = []
-  const { R, C } = board
-  for (let r = 0; r < R; r++) {
+  for (let r = 0; r < board.R; r++) {
     let line = ''
-    for (let c = 0; c < C; c++) {
+    for (let c = 0; c < board.C; c++) {
       const i = board.I(r, c)
       if (board.rev.has(i)) {
-        const v = board.numAt(i)
+        const v = board.num(i)
         line += v === 0 ? '.' : String(v)
-      } else if (board.known.has(i)) {
+      } else if (board.flag.has(i)) {
         line += 'F'
       } else {
         line += '#'
@@ -28,14 +27,15 @@ function render(board) {
 }
 
 function deal(R, C, M) {
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const r = build(R, C, M, seed + attempt * 7919)
+  for (let t = 0; t < 40; t++) {
+    const r = build(R, C, M, seed + t * 7919)
     if (!r.ok) continue
     const board = r.board
     board.rev = new Set(r.snapshot)
     board.known = new Set()
+    board.flag = new Set()
     board.dead = false
-    return { board, hints: r.hints }
+    return { board, hints: shapeHints(board) }
   }
   return null
 }
@@ -62,11 +62,16 @@ export function apply(ctx) {
           return () => {}
         }
         const { board, hints } = game
+        const exact = hints.filter(h => h.exact).length
+        const weak = hints.length - exact
+        const sample = hints.slice(0, 3)
+          .map(h => `${DISP[h.key]}${h.lb}`)
+          .join(' · ')
         emit({
           left: String(board.m),
           level: '初级 9×9 · 10 雷',
           board: render(board),
-          note: '形状提示 ' + hints.length + ' 条；完整盘面见 src/ 里的桌面版。',
+          note: `提示 ${hints.length} 条（共有 ${exact} / 至少 ${weak}）${sample ? ' · 例：' + sample : ''}`,
         })
         return () => {}
       },
