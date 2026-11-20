@@ -294,7 +294,7 @@ public class Sweeper extends JFrame {
     final JLabel mineLabel = new JLabel(" ");
     final JLabel timeLabel = new JLabel("00:00");
     final JCheckBox hintBox = new JCheckBox("显示形状提示", true);
-    int seconds = 0; boolean running = false;
+    int seconds = 0; boolean running = false; int densityLevel = 1;
     long startedAt = 0; int highlight = -1;
     final javax.swing.Timer clock;
 
@@ -323,6 +323,12 @@ public class Sweeper extends JFrame {
         bar.addSeparator();
         bar.add(hintBox);
         hintBox.addActionListener(e -> panel.repaint());
+        String[] dens = {"精简", "标准", "全部"};
+        JComboBox<String> density = new JComboBox<>(dens);
+        density.setSelectedIndex(1);
+        density.addActionListener(e -> { densityLevel = density.getSelectedIndex(); panel.repaint(); });
+        bar.add(new JLabel(" 提示 "));
+        bar.add(density);
         JButton hb = new JButton("提示");
         hb.addActionListener(e -> showHint());
         bar.add(hb);
@@ -371,6 +377,21 @@ public class Sweeper extends JFrame {
         catch (Exception e) { }
     }
 
+    void describeCell(int i) {
+        int v = board.num(i);
+        if (v == 0) { status.setText(" 空格，周围没有雷"); return; }
+        String exactTxt = null, weakTxt = null;
+        for (Hint h : hints) if (h.i == i) exactTxt = DISP.get(h.key) + h.lb;
+        for (Hint h : weak) if (h.i == i) weakTxt = DISP.get(h.key) + h.lb;
+        String pos = "R" + (i / C + 1) + "C" + (i % C + 1);
+        if (exactTxt != null)
+            status.setText(" " + pos + " 数字 " + v + "：共有 " + exactTxt + " 颗雷在这个形状里");
+        else if (weakTxt != null)
+            status.setText(" " + pos + " 数字 " + v + "：至少 " + weakTxt + " 颗雷在这个形状里");
+        else
+            status.setText(" " + pos + " 数字 " + v + "：这格暂时没有形状提示");
+    }
+
     void showHint() {
         if (board == null || board.dead) return;
         for (Hint h : hints) {
@@ -394,7 +415,7 @@ public class Sweeper extends JFrame {
     void updateCounters() {
         int flags = 0;
         for (int i = 0; i < R*C; i++) if (board.flag[i]) flags++;
-        mineLabel.setText("剩余雷 " + (M - flags) + "  ");
+        mineLabel.setText("剩余雷 " + (M - flags) + " · 提示 " + hints.size() + "/" + weak.size() + "  ");
         if (board.dead) { status.setText(" 踩到雷了 —— 按新局再来"); running = false; }
         else if (board.revCount() == R*C - M) {
             double sec = (System.currentTimeMillis() - startedAt) / 1000.0;
@@ -447,7 +468,8 @@ public class Sweeper extends JFrame {
                 if (!board.rev[i]) { board.flag[i] = !board.flag[i]; repaint(); updateCounters(); }
                 return;
             }
-            if (board.rev[i] || board.flag[i] || board.dead) return;
+            if (board.rev[i]) { describeCell(i); return; }
+            if (board.flag[i] || board.dead) return;
             board.open(i);
             weak = board.weakHints();
             if (board.revCount() == R*C - M) for (int k = 0; k < R*C; k++) if (board.mine[k]) board.flag[k] = true;
@@ -510,6 +532,8 @@ public class Sweeper extends JFrame {
             FontMetrics fmw = g.getFontMetrics();
             for (Hint h : weak) {
                 if (!board.rev[h.i]) continue;
+                if (densityLevel == 0) continue;
+                if (densityLevel == 1 && h.lb < 2 && h.n > 3) continue;
                 boolean exactHere = false;
                 for (Hint h2 : hints) if (h2.i == h.i) { exactHere = true; break; }
                 if (exactHere) continue;

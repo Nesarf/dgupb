@@ -46,6 +46,10 @@ class App:
         self.flag_btn.pack(side="left", padx=4)
         tk.Checkbutton(bar, text="显示形状提示", variable=self.show_hints, bg=BG,
                        command=self.draw).pack(side="left", padx=6)
+        self.density = tk.StringVar(value="标准")
+        ttk.Combobox(bar, textvariable=self.density, values=["精简", "标准", "全部"],
+                     width=6, state="readonly").pack(side="left", padx=4)
+        self.density.trace_add("write", lambda *a: self.draw())
         self.info = tk.Label(bar, text="", bg=BG, font=("Noto Sans CJK SC", 11))
         self.info.pack(side="right")
 
@@ -198,8 +202,11 @@ class App:
                         cv.create_line(cx - 7, cy - 9, cx - 7, cy + 11, fill="#6b7a88", width=2)
         if self.show_hints.get():
             exact_cells = {h[0] for h in self.hints}
+            level = {"精简": 0, "标准": 1, "全部": 2}.get(self.density.get(), 1)
             for (q, sym, ids, lb, _exact) in self.weak:
-                if q in exact_cells:
+                if q in exact_cells or level == 0:
+                    continue
+                if level == 1 and lb < 2 and len(ids) > 3:
                     continue
                 r, c = q
                 if (r, c) not in self.b.revealed:
