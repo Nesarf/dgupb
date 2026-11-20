@@ -20,6 +20,7 @@ dsh-go useful plugin bundle：一组本地 dsh-go 原生插件，给手机 App �
 | `local-ichiwatashi` | 像素测量：Ichiwatashi 的像素画质量报告 | Ichiwatashi 仓库 + Python |
 | `local-volcano` | 宿主观察：进程、负载、内存、磁盘 | 无 |
 | `local-lineweight` | 线稿：LineWeight 生成带笔压的矢量线稿 | LineWeight 仓库 + Python |
+| `local-sweeper` | 扫雷：字符画棋盘 + 形状提示统计，桌面版在 src/ | 无 |
 
 ## 安装
 

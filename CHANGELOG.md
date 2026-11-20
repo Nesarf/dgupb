@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.9.0 - 2026-11-21
+
+- `local-sweeper`: new plugin. Minesweeper panel with an ASCII board and shape-hint stats;
+  playable desktop builds (Swing / tkinter) and the generator live in `local-sweeper/src/`.
+
 ## v0.8.0 - 2026-11-16
 
 - `local-asc`: add VML LLM settings block (provider/model/key state, set key from clipboard,
