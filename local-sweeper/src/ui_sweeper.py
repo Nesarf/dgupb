@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 """扫雷 · 形状提示版（tkinter 窗口）"""
 import sys, time, random
-sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
+sys.path.insert(0, "/root/workspace")
 import tkinter as tk
 from tkinter import ttk
-from sweeper_core import B, SHAPES, DISP
+from hint_research import B, SHAPES, DISP
 
 BG = "#e8eef4"
 HID = "#c8d6e3"

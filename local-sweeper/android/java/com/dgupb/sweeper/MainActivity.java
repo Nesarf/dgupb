@@ -24,6 +24,9 @@ public class MainActivity extends Activity {
         web.setBackgroundColor(0xFFE8EEF4);
         web.setWebViewClient(new WebViewClient());
         web.loadUrl("file:///android_asset/sweeper.html");
+        int id = getResources().getIdentifier("status_bar_height", "dimen", "android");
+        int top = id > 0 ? getResources().getDimensionPixelSize(id) : 0;
+        web.setPadding(0, top, 0, 0);
         setContentView(web);
     }
 

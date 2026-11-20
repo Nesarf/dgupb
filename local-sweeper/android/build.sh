@@ -12,8 +12,11 @@ shutil.copy('build/base.apk', 'build/app.apk')
 with zipfile.ZipFile('build/app.apk','a',zipfile.ZIP_DEFLATED) as z:
     z.write('build/dex/classes.dex','classes.dex')
 PY
-keytool -genkeypair -storetype JKS -keystore build/debug.keystore -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" 2>/dev/null
-java -cp $BT/lib/apksigner.jar com.android.apksigner.ApkSignerTool sign --ks build/debug.keystore --ks-pass pass:android --key-pass pass:android --out build/sweeper.apk build/app.apk 2>/dev/null
+KS="$(cd "$(dirname "$0")" && pwd)/debug.keystore"
+if [ ! -f "$KS" ]; then
+  keytool -genkeypair -storetype JKS -keystore "$KS" -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" 2>/dev/null
+fi
+java -cp $BT/lib/apksigner.jar com.android.apksigner.ApkSignerTool sign --ks "$KS" --ks-pass pass:android --key-pass pass:android --out build/sweeper.apk build/app.apk 2>/dev/null
 java -cp $BT/lib/apksigner.jar com.android.apksigner.ApkSignerTool verify build/sweeper.apk 2>/dev/null
 cp build/sweeper.apk /sdcard/Download/DSH-Go/扫雷.apk
 ls -lh build/sweeper.apk

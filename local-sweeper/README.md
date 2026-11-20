@@ -58,3 +58,14 @@ cd android
 
 需要 `android.jar`、`d8.jar`、`apksigner.jar` 与系统 `aapt2`；脚本里用 `SDK` 变量指向它们。
 产物约 25 KB，签名后即可安装。
+
+## 游戏本体
+
+`sweeper_app.html` 是单文件应用（横屏、形状提示、手势缩放），`android/` 是它的 APK 壳，
+`src/` 里是早期 Python 实现。提示语义、四档设置、构建步骤和已知限制都写在
+[GAME.md](GAME.md) 里。
+
+```sh
+cd android && ./build.sh      # 产出 build/sweeper.apk
+adb install -r build/sweeper.apk
+```

@@ -9,34 +9,63 @@
 <link rel="manifest" href='data:application/manifest+json,{"name":"扫雷 · 形状提示","short_name":"扫雷","display":"standalone","start_url":".","background_color":"#e8eef4","theme_color":"#dde7f0"}'>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; height: 100%; padding-top: env(safe-area-inset-top, 0px); background: #e8eef4; color: #22323f;
+  html, body { margin: 0; height: 100%; overflow: hidden; padding-top: env(safe-area-inset-top, 0px); background: #e8eef4; color: #22323f;
     font-family: -apple-system, "Noto Sans CJK SC", "PingFang SC", system-ui, sans-serif; }
-  header { display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
-    padding: 8px 10px 6px; background: #dde7f0; border-bottom: 1px solid #c9d6e2; }
-  select, button { font: inherit; font-size: 13px; padding: 5px 9px; border-radius: 8px;
-    border: 1px solid #b9c9d8; background: #f7fbfe; color: #22323f; }
+  body { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; overflow: hidden; }
+  header { display: flex; flex-direction: column; gap: 6px;
+    padding: 8px 10px; background: #dde7f0; border-bottom: 1px solid #c9d6e2; }
+  header .row { display: flex; gap: 6px; align-items: center; }
+  header .row .stat { margin-left: auto; }
+  header select { flex: 0 1 auto; min-width: 0; max-width: 168px; }
+  select, button { font: inherit; font-size: 13px; padding: 6px 10px; border-radius: 10px;
+    white-space: nowrap;
+    border: 1px solid #b9c9d8; background: #f7fbfe; color: #22323f; line-height: 1.2; }
   button:active { background: #e3edf5; }
   .stat { margin-left: auto; font-size: 12px; color: #4a6072; white-space: nowrap; }
-  #wrap { padding: 6px; display: flex; justify-content: center; overflow-x: auto; }
-  canvas { touch-action: none; border-radius: 8px; background: #f4f8fb;
-    box-shadow: 0 1px 6px rgba(30,60,90,.12); }
-  #msg { text-align: center; font-size: 13px; color: #35566d; padding: 4px 10px 10px; min-height: 22px; }
+  #wrap { padding: 12px 8px; overflow: auto; display: flex; align-items: center; justify-content: center; }
+  #wrap canvas { display: block; margin: 0; max-width: 100%; max-height: 100%; }
+  body.zoomed #wrap canvas { max-width: none; max-height: none; }
+  body.zoomed #wrap { justify-content: flex-start; align-items: flex-start; }
+  canvas { touch-action: none; border-radius: 10px; background: #f4f8fb;
+    box-shadow: 0 2px 10px rgba(30,60,90,.14); }
+  #msg { text-align: center; font-size: 13px; color: #35566d;
+    padding: 8px 14px 16px; min-height: 22px; line-height: 1.5; }
+  @media (orientation: landscape) {
+    body { grid-template-columns: 176px 1fr; grid-template-rows: 1fr auto; }
+    header { grid-row: 1 / 3; grid-column: 1; flex-direction: column;
+      align-items: stretch; gap: 8px; padding: 12px 10px;
+      border-right: 1px solid #c9d6e2; border-bottom: none; }
+    header .row { flex-direction: column; align-items: stretch; gap: 7px; }
+    header .row .stat { margin-left: 0; text-align: center; }
+    header select { max-width: none; width: 100%; }
+    #wrap { grid-column: 2; grid-row: 1; padding: 10px; }
+    #msg { grid-column: 2; grid-row: 2; padding: 6px 14px 12px; }
+  }
 </style>
 </head>
 <body>
 <header>
+  <div class="row">
   <select id="level">
     <option value="9,9,10">初级 9×9 · 10</option>
     <option value="16,16,40">中级 16×16 · 40</option>
     <option value="16,30,100" selected>高级 16×30 · 100</option>
   </select>
   <button id="newgame">新局</button>
+  <button id="undo">撤销</button>
+  <button id="zoom">放大</button>
+  </div>
+  <div class="row">
+  <button id="retip">下一步</button>
+  <button id="refresh">刷新提示</button>
   <select id="density">
     <option value="0">精简</option>
     <option value="1" selected>标准</option>
     <option value="2">全部</option>
+    <option value="3">关闭</option>
   </select>
   <span class="stat" id="stat">准备中…</span>
+  </div>
 </header>
 <div id="wrap"><canvas id="board"></canvas></div>
 <div id="msg">点格子翻开，长按插旗；点已翻开的数字可以连开周围</div>
@@ -237,7 +266,10 @@ function deal(R,C,m){
 }
 
 function shapeHints(b){
-  const out=[], used={};
+  // 只输出能严格证明的提示：
+  //   形状覆盖了该格全部未开邻格 → 形状内雷数就是该数字的剩余雷数（共有）
+  //   否则只给严格下界（至少 n 颗）
+  const out=[];
   for(const q of b.rev){
     const v=b.num(q); if(!v) continue;
     const base=b.rest(q);
@@ -248,21 +280,13 @@ function shapeHints(b){
       if(!unk.length) continue;
       let outside=0;
       for(const p of b.nbs(q)) if(!set.has(p)&&b.unk(p)) outside++;
-      const lb=Math.max(0,base-outside);
-      let outer=0;
-      for(const q2 of b.nbs(q)){
-        if(!b.rev.has(q2)||!b.num(q2)) continue;
-        let inner=0;
-        for(const p of b.nbs(q2)) if(set.has(p)&&b.unk(p)) inner++;
-        outer=Math.max(outer,b.rest(q2)-inner);
-      }
-      const ub=Math.max(lb,base-outer);
-      const exact=(lb===ub);
-      if(!exact&&lb<1) continue;
-      const score=(exact?100:0)+lb*10-unk.length-(used[key]||0);
+      const exact=(outside===0);
+      const lb = exact ? base : Math.max(0, base-outside);
+      if(!exact && lb<1) continue;
+      const score=(exact?200:0)+lb*100-unk.length;
       if(!best||score>best.score) best={score,key,lb,exact,n:unk.length};
     }
-    if(best){ used[best.key]=(used[best.key]||0)+1; out.push({i:q,...best}); }
+    if(best) out.push({i:q,key:best.key,lb:best.lb,exact:best.exact,n:best.n,trivial:best.exact&&(best.lb===0||best.lb>=best.n)});
   }
   return out;
 }
@@ -272,18 +296,30 @@ const cv = document.getElementById('board');
 const ctx = cv.getContext('2d');
 const msg = document.getElementById('msg');
 const stat = document.getElementById('stat');
-let board=null, hints=[], weak=[], cell=24, pad=0, R=16, C=30, M=100;
+let board=null, hints=[], weak=[], cell=24, pad=0, R=16, C=30, M=100, history=[];
+let hintMap = new Map();
 let startedAt=0, running=false, timer=null;
 
 function level(){ const v=document.getElementById('level').value.split(',').map(Number); return v; }
 function density(){ return Number(document.getElementById('density').value); }
 
+let dpr = 1, zoom = 1;
 function layout(){
-  const maxW = Math.min(window.innerWidth - 16, 1500);
-  cell = Math.max(16, Math.min(36, Math.floor(maxW / C)));
+  const wrapEl = document.getElementById('wrap');
+  const wrapW = wrapEl.clientWidth || window.innerWidth;
+  // 高度按可视窗口扣掉状态栏与底部提示，避免棋盘把提示挤出屏幕
+  const availH = (window.innerHeight || 600) - 96;
+  const byW = Math.floor(Math.max(240, wrapW - 16) / C);
+  const byH = Math.floor(Math.max(140, availH) / R);
+  cell = Math.round(Math.min(40, Math.max(21, Math.min(byW, byH))) * zoom);
   pad = 2;
-  cv.width = C*cell + pad*2;
-  cv.height = R*cell + pad*2;
+  const w = C*cell + pad*2, h = R*cell + pad*2;
+  dpr = Math.min(window.devicePixelRatio || 1, 3);
+  cv.width = Math.round(w * dpr);
+  cv.height = Math.round(h * dpr);
+  cv.style.width = w + 'px';
+  cv.style.height = h + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
 function newGame(){
@@ -294,7 +330,9 @@ function newGame(){
   const res = deal(R,C,M);
   if(!res){ msg.textContent='生成失败，再按一次新局'; return; }
   board = res.board; hints = res.hints;
-  weak = shapeHints(board);
+  hintMap = new Map();
+  for(const h of shapeHints(board)) hintMap.set(h.i, h);   // 发牌时就把开局能算的全算好
+  weak = [...hintMap.values()];
   startedAt = Date.now(); running = true;
   layout(); draw(); tick();
   msg.textContent = '点格子翻开，长按插旗；点已翻开的数字连开周围';
@@ -327,9 +365,9 @@ function draw(){
       const v=board.num(i);
       if(v){
         ctx.fillStyle=['','#2f6fa8','#2e7d46','#c0392b','#5b3f94','#8a5a2b','#1f7a7a','#333','#777'][v];
-        ctx.font=`bold ${Math.floor(s*0.55)}px system-ui, sans-serif`;
+        ctx.font=`bold ${Math.round(s*0.42)}px system-ui, sans-serif`;
         ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText(String(v), x+s/2, y+s/2);
+        ctx.fillText(String(v), x+s/2, y+s*0.50);
       }
     } else {
       ctx.fillStyle='#c9d6e2'; ctx.fillRect(x+1,y+1,s-2,s-2);
@@ -345,6 +383,24 @@ function draw(){
       }
     }
   }
+  if(shapeCell>=0){
+    const h = weak.find(w=>w.i===shapeCell);
+    if(h){
+      ctx.fillStyle='rgba(255,196,0,0.30)';
+      for(const p of board.shapeCells(h.i,h.key)){
+        const [r,c]=board.RC(p);
+        ctx.fillRect(pad+c*s+1, pad+r*s+1, s-2, s-2);
+      }
+      const [rr,cc]=board.RC(h.i);
+      ctx.strokeStyle='#f0a000'; ctx.lineWidth=Math.max(2,s*0.09);
+      ctx.strokeRect(pad+cc*s+1, pad+rr*s+1, s-2, s-2);
+    }
+  }
+  if(hintCell>=0){
+    const [hr,hc]=board.RC(hintCell);
+    ctx.strokeStyle='#ffb300'; ctx.lineWidth=Math.max(2,s*0.10);
+    ctx.strokeRect(pad+hc*s+1, pad+hr*s+1, s-2, s-2);
+  }
   drawHints();
   if(board.dead){
     ctx.fillStyle='rgba(0,0,0,0.10)'; ctx.fillRect(0,0,cv.width,cv.height);
@@ -357,40 +413,74 @@ function drawHints(){
   for(const h of weak){
     if(!board.rev.has(h.i)||drawn.has(h.i)) continue;
     if(!board.shapeCells(h.i,h.key).some(p=>!board.rev.has(p))) continue;
-    if(lvl===0&&!h.exact) continue;
-    if(lvl===1&&!h.exact&&h.lb<2) continue;
+    if(lvl===3) continue;                       // 关闭
+    if(lvl===0 && (!h.exact || h.trivial)) continue;   // 精简：只留非平凡的精确值
+    if(lvl===1 && (h.trivial || (!h.exact && h.lb<2))) continue; // 标准：再加「至少 2 颗」以上
     const [r,c]=board.RC(h.i);
     const x=pad+c*s, y=pad+r*s;
     const txt=DISP[h.key]+h.lb;
-    ctx.font=`${Math.max(7,Math.floor(s*0.28))}px system-ui, sans-serif`;
+    ctx.font=`${Math.max(6,Math.round(s*0.28))}px system-ui, sans-serif`;
     ctx.textAlign='right';
-    if(h.exact){ ctx.fillStyle='#2f6fa8'; ctx.fillText(txt, x+s-2, y+s-3); }
-    else { ctx.fillStyle='#b06a00'; ctx.fillText(txt, x+s-2, y+Math.floor(s*0.32)+2); }
+    if(h.exact){
+      ctx.textBaseline='alphabetic'; ctx.fillStyle=h.trivial ? '#8aa7bd' : '#2f6fa8';
+      ctx.fillText(txt, x+s-2, y+s-2);
+    } else {
+      ctx.textBaseline='top'; ctx.fillStyle='#b06a00';
+      ctx.fillText(txt, x+s-2, y+1.5);
+    }
     drawn.add(h.i);
   }
   for(const h of hints){
     if(drawn.has(h.i)||!board.rev.has(h.i)) continue;
     const [r,c]=board.RC(h.i);
     const x=pad+c*s, y=pad+r*s;
-    ctx.font=`${Math.max(7,Math.floor(s*0.28))}px system-ui, sans-serif`;
-    ctx.textAlign='right'; ctx.fillStyle='#2f6fa8';
-    ctx.fillText(DISP[h.key]+h.lb, x+s-2, y+s-3);
+    ctx.font=`${Math.max(7,Math.round(s*0.30))}px system-ui, sans-serif`;
+    ctx.textAlign='right'; ctx.textBaseline='alphabetic'; ctx.fillStyle='#2f6fa8';
+    ctx.fillText(DISP[h.key]+h.lb, x+s-2, y+s-2.5);
     drawn.add(h.i);
   }
 }
 
 function hit(ev){
   const rect=cv.getBoundingClientRect();
-  const x=(ev.clientX-rect.left)*(cv.width/rect.width);
-  const y=(ev.clientY-rect.top)*(cv.height/rect.height);
+  const w=C*cell+pad*2, h=R*cell+pad*2;
+  const x=(ev.clientX-rect.left)*(w/rect.width);
+  const y=(ev.clientY-rect.top)*(h/rect.height);
   const c=Math.floor((x-pad)/cell), r=Math.floor((y-pad)/cell);
   if(r<0||c<0||r>=R||c>=C) return null;
   return board.I(r,c);
 }
 
+function topUpHints(){
+  // 新翻开的格子补算提示，已经存在的格子保持不变
+  const fresh = shapeHints(board);
+  let added = 0;
+  for(const h of fresh){
+    if(!hintMap.has(h.i)){ hintMap.set(h.i, h); added++; }
+  }
+  if(added) weak = [...hintMap.values()];
+  return added;
+}
+
+function snapshot(){
+  history.push({rev:new Set(board.rev), flags:new Set(board.flag), dead:board.dead});
+  if(history.length>80) history.shift();
+}
+
+function undo(){
+  const s = history.pop();
+  if(!s) { msg.textContent='没有可撤销的步骤'; return; }
+  board.rev = new Set(s.rev); board.flag = new Set(s.flags); board.dead = s.dead;
+  running = !board.dead;
+  draw();
+  msg.textContent = '已撤销一步';
+}
+
 function openAt(i){
   if(!board||board.dead||board.rev.has(i)||board.flag.has(i)) return;
+  snapshot();
   board.open(i);
+  topUpHints();
   if(board.dead){ running=false; msg.textContent='踩到雷了 —— 按新局再来'; }
   else if(board.rev.size===R*C-M){
     running=false;
@@ -402,7 +492,6 @@ function openAt(i){
     if(!prev||sec<prev) localStorage.setItem(key,sec);
     msg.textContent=`清完了 —— ${sec} 秒（最佳 ${best} 秒）`;
   }
-  weak=shapeHints(board);
   draw(); stat.textContent=`剩余 ${M-board.flag.size} · ${((Date.now()-startedAt)/1000)|0}s`;
 }
 
@@ -416,37 +505,165 @@ function chordAt(i){
     return true;
   }
   for(const p of board.nbs(i)) if(!board.rev.has(p)&&!board.flag.has(p)) board.open(p);
+  topUpHints();
   if(board.dead){ running=false; msg.textContent='踩到雷了 —— 按新局再来'; }
   else if(board.rev.size===R*C-M){ running=false; msg.textContent='清完了'; }
-  weak=shapeHints(board); draw();
+  draw();
   return true;
 }
 
 let pressTimer=null, pressCell=null, longFired=false;
+let dragging=false, dragStartX=0, dragStartY=0, dragScrollL=0, dragScrollT=0;
+let pinchDist=0, pinchZoom=1, multiTouch=false;
+
+function touchDist(t){
+  const dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY;
+  return Math.hypot(dx,dy);
+}
+
+document.getElementById('wrap').addEventListener('touchstart', e=>{
+  if(e.touches.length===2){
+    multiTouch=true; clearTimeout(pressTimer);
+    pinchDist=touchDist(e.touches); pinchZoom=zoom;
+  }
+},{passive:true});
+
+document.getElementById('wrap').addEventListener('touchmove', e=>{
+  if(e.touches.length===2 && pinchDist>0){
+    e.preventDefault();
+    const d=touchDist(e.touches);
+    const ratio = pinchDist > 0 ? d / pinchDist : 1;
+    // 手指位移按 0.6 折算，避免轻轻一捏就跳很大
+    zoom = Math.min(2.2, Math.max(0.7, pinchZoom * (1 + (ratio - 1) * 0.6)));
+    layout(); draw();
+  }
+},{passive:false});
+
+document.getElementById('wrap').addEventListener('touchend', e=>{
+  if(e.touches.length<2){
+    pinchDist=0;
+    setTimeout(()=>{ multiTouch=false; }, 200);
+  }
+},{passive:true});
 
 cv.addEventListener('pointerdown', ev=>{
   if(!board) return;
+  if(!ev.isPrimary){ clearTimeout(pressTimer); multiTouch=true; return; }
   const i=hit(ev); if(i===null) return;
-  pressCell=i; longFired=false;
+  pressCell=i; longFired=false; dragging=false;
+  try{ cv.setPointerCapture(ev.pointerId); }catch(e){}
+  dragStartX=ev.clientX; dragStartY=ev.clientY;
+  const wrapEl=document.getElementById('wrap');
+  dragScrollL=wrapEl.scrollLeft; dragScrollT=wrapEl.scrollTop;
   pressTimer=setTimeout(()=>{
     longFired=true;
-    if(!board.rev.has(i)){ board.flag.has(i)?board.flag.delete(i):board.flag.add(i); draw(); }
+    if(!board.rev.has(i)){ snapshot(); board.flag.has(i)?board.flag.delete(i):board.flag.add(i); draw(); }
   }, 420);
 });
+cv.addEventListener('pointermove', ev=>{
+  if(!ev.isPrimary||multiTouch) return;
+  const dx=ev.clientX-dragStartX, dy=ev.clientY-dragStartY;
+  if(!dragging && Math.hypot(dx,dy)>8){ dragging=true; clearTimeout(pressTimer); }
+  if(dragging){
+    const wrapEl=document.getElementById('wrap');
+    wrapEl.scrollLeft=dragScrollL-dx;
+    wrapEl.scrollTop=dragScrollT-dy;
+  }
+});
+
+cv.addEventListener('pointercancel', ()=>{ dragging=false; clearTimeout(pressTimer); });
+
 cv.addEventListener('pointerup', ev=>{
   clearTimeout(pressTimer);
-  if(!board||longFired) return;
+  if(dragging){ dragging=false; return; }
+  if(!board||longFired||multiTouch) return;
   const i=hit(ev); if(i===null) return;
-  if(board.rev.has(i)) chordAt(i);
-  else openAt(i);
+  if(board.rev.has(i)){
+    const h = weak.find(w=>w.i===i);
+    if(h){
+      shapeCell = i;
+      const cells = board.shapeCells(h.i, h.key).length;
+      msg.textContent = `${DISP[h.key]} 覆盖 ${cells} 格：${h.exact?'共有':'至少'} ${h.lb} 颗`;
+      draw();
+      setTimeout(()=>{ shapeCell=-1; draw(); }, 2600);
+      return;
+    }
+    chordAt(i);
+    return;
+  }
+  openAt(i);
 });
 cv.addEventListener('pointercancel', ()=>clearTimeout(pressTimer));
 cv.addEventListener('contextmenu', ev=>ev.preventDefault());
 
 document.getElementById('newgame').onclick=newGame;
+document.getElementById('undo').onclick=undo;
+let hintCell = -1, shapeCell = -1;
+
+function findMove(){
+  let [mi,sa]=board.localRules();
+  if(!mi.size&&!sa.size) [mi,sa]=board.subsetRules();
+  if(!mi.size&&!sa.size) for(const h of weak){
+    const cells=board.shapeCells(h.i,h.key).filter(p=>board.unk(p));
+    if(!cells.length) continue;
+    if(h.lb>=cells.length) cells.forEach(x=>mi.add(x));
+    else if(h.exact&&h.lb===0) cells.forEach(x=>sa.add(x));
+  }
+  const safe=[...sa].filter(x=>!board.rev.has(x)&&!board.flag.has(x));
+  const mines=[...mi].filter(x=>!board.rev.has(x)&&!board.flag.has(x));
+  if(safe.length) return {cell:safe[0], mine:false};
+  if(mines.length) return {cell:mines[0], mine:true};
+  return null;
+}
+
+function flashHint(cell, text){
+  hintCell = cell;
+  draw();
+  if(cell>=0){
+    const [r,c]=board.RC(cell);
+    msg.textContent = text + ` —— R${r+1}C${c+1}`;
+  } else {
+    msg.textContent = text;
+  }
+  setTimeout(()=>{ hintCell=-1; draw(); }, 9000);
+}
+
+document.getElementById('retip').onclick=()=>{
+  if(!board||board.dead) return;
+  let mv = findMove();
+  if(mv){
+    flashHint(mv.cell, mv.mine ? '这一格确定是雷，长按插旗' : '有一格能确定安全（黄框）');
+    return;
+  }
+  weak = shapeHints(board);        // 卡住时按当前局面重算一次
+  draw();
+  mv = findMove();
+  if(mv){
+    flashHint(mv.cell, mv.mine ? '提示已重算：这一格确定是雷' : '提示已重算：这一格能确定安全');
+  } else {
+    flashHint(-1, '重算后仍然没有能确定的格，只能赌一格');
+  }
+};
+
+document.getElementById('refresh').onclick=()=>{
+  if(!board||board.dead) return;
+  hintMap = new Map();
+  for(const h of shapeHints(board)) hintMap.set(h.i, h);
+  weak = [...hintMap.values()];
+  draw();
+  msg.textContent = '提示已按当前局面重算（共 ' + weak.length + ' 格）';
+};
+
+document.getElementById('zoom').onclick=()=>{
+  zoom = zoom === 1 ? 1.7 : 1;
+  document.body.classList.toggle('zoomed', zoom !== 1);
+  document.getElementById('zoom').textContent = zoom === 1 ? '放大' : '缩小';
+  layout(); draw();
+};
 document.getElementById('level').onchange=newGame;
 document.getElementById('density').onchange=()=>draw();
-window.addEventListener('resize',()=>{ layout(); draw(); });
+window.addEventListener('resize',()=>{ setTimeout(()=>{ layout(); draw(); }, 120); });
+window.addEventListener('orientationchange',()=>{ setTimeout(()=>{ layout(); draw(); }, 200); });
 newGame();
 </script>
 </body>
