@@ -203,19 +203,24 @@ public class Sweeper extends JFrame {
                     int outside = 0;
                     for (int p : nbs(q)) if (!set.contains(p) && unk(p)) outside++;
                     int lb = Math.max(0, base - outside);
-                    if (lb >= 1 && lb < un) {
-                        int score = lb * 10 - un - used.getOrDefault(key, 0) * 3;
-                        if (score > bestScore) {
-                            bestScore = score;
-                            best = new Hint();
-                            best.i = q; best.key = key; best.lb = lb; best.n = un; best.exact = false;
-                        }
+                    int outer = 0;
+                    for (int q2 : nbs(q)) {
+                        if (!rev[q2] || num(q2) == 0) continue;
+                        int inner = 0;
+                        for (int p : nbs(q2)) if (set.contains(p) && unk(p)) inner++;
+                        outer = Math.max(outer, rest(q2) - inner);
+                    }
+                    int ub = Math.max(lb, base - outer);
+                    boolean exact = (lb == ub);
+                    if (!exact && lb < 1) continue;
+                    int score = (exact ? 100 : 0) + lb * 10 - un - used.getOrDefault(key, 0);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        best = new Hint();
+                        best.i = q; best.key = key; best.lb = lb; best.n = un; best.exact = exact;
                     }
                 }
-                if (best != null) {
-                    used.put(best.key, used.getOrDefault(best.key, 0) + 1);
-                    out.add(best);
-                }
+                if (best != null) { used.put(best.key, used.getOrDefault(best.key, 0) + 1); out.add(best); }
             }
             return out;
         }
@@ -415,7 +420,8 @@ public class Sweeper extends JFrame {
     void updateCounters() {
         int flags = 0;
         for (int i = 0; i < R*C; i++) if (board.flag[i]) flags++;
-        mineLabel.setText("剩余雷 " + (M - flags) + " · 提示 " + hints.size() + "/" + weak.size() + "  ");
+        int ex = 0; for (Hint h : weak) if (h.exact) ex++;
+        mineLabel.setText("剩余雷 " + (M - flags) + " · 精确 " + ex + " / 至少 " + (weak.size() - ex) + "  ");
         if (board.dead) { status.setText(" 踩到雷了 —— 按新局再来"); running = false; }
         else if (board.revCount() == R*C - M) {
             double sec = (System.currentTimeMillis() - startedAt) / 1000.0;
@@ -529,40 +535,40 @@ public class Sweeper extends JFrame {
         }
         void drawHints(Graphics2D g) {
             g.setFont(smallFont);
-            FontMetrics fmw = g.getFontMetrics();
+            FontMetrics fm = g.getFontMetrics();
+            HashSet<Integer> drawn = new HashSet<>();
             for (Hint h : weak) {
-                if (!board.rev[h.i]) continue;
-                if (densityLevel == 0) continue;
-                if (densityLevel == 1 && h.lb < 2 && h.n > 3) continue;
-                boolean exactHere = false;
-                for (Hint h2 : hints) if (h2.i == h.i) { exactHere = true; break; }
-                if (exactHere) continue;
+                if (!board.rev[h.i] || drawn.contains(h.i)) continue;
                 boolean any = false;
                 for (int p : board.shapeCells(h.i, h.key)) if (!board.rev[p]) any = true;
                 if (!any) continue;
+                if (densityLevel == 0 && !h.exact) continue;
+                if (densityLevel == 1 && !h.exact && h.lb < 2) continue;
                 int r = h.i / C, c = h.i % C;
                 int x = pad + c*cell, y = pad + r*cell;
                 String txt = DISP.get(h.key) + h.lb;
-                g.setColor(new Color(0xB0, 0x6A, 0x00));
-                g.drawString(txt, x + cell - 3 - fmw.stringWidth(txt), y + 11);
-            }
-            HashSet<Integer> drawn = new HashSet<>();
-            for (Hint h : hints) {
-                if (!board.rev[h.i]) continue;
-                if (drawn.contains(h.i)) continue;
-                drawn.add(h.i);
-                ArrayList<Integer> cells = new ArrayList<>();
-                for (int p : board.shapeCells(h.i, h.key)) if (!board.rev[p]) cells.add(p);
-                if (cells.isEmpty()) continue;
-                int r = h.i / C, c = h.i % C;
-                int x = pad + c*cell, y = pad + r*cell;
-                String txt = DISP.get(h.key) + h.lb;
-                g.setColor(new Color(0x2F6FA8));
-                FontMetrics fm = g.getFontMetrics();
                 int tw = fm.stringWidth(txt);
+                if (h.exact) {
+                    g.setColor(new Color(0x2F, 0x6F, 0xA8));
+                    g.drawString(txt, x + cell - tw - 3, y + cell - 4);
+                } else {
+                    g.setColor(new Color(0xB0, 0x6A, 0x00));
+                    g.drawString(txt, x + cell - tw - 3, y + 11);
+                }
+                drawn.add(h.i);
+            }
+            for (Hint h : hints) {
+                if (!board.rev[h.i] || drawn.contains(h.i)) continue;
+                drawn.add(h.i);
+                int r = h.i / C, c = h.i % C;
+                int x = pad + c*cell, y = pad + r*cell;
+                String txt = DISP.get(h.key) + h.lb;
+                int tw = fm.stringWidth(txt);
+                g.setColor(new Color(0x2F, 0x6F, 0xA8));
                 g.drawString(txt, x + cell - tw - 3, y + cell - 4);
             }
         }
+
         void drawMine(Graphics2D g, int x, int y) {
             g.setColor(new Color(0x2B3A45));
             int cx = x + cell/2, cy = y + cell/2, rr = Math.max(4, cell/5);

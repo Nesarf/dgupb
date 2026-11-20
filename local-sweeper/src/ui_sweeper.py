@@ -201,32 +201,37 @@ class App:
                                           fill="#d64045", outline="")
                         cv.create_line(cx - 7, cy - 9, cx - 7, cy + 11, fill="#6b7a88", width=2)
         if self.show_hints.get():
-            exact_cells = {h[0] for h in self.hints}
-            level = {"精简": 0, "标准": 1, "全部": 2}.get(self.density.get(), 1)
-            for (q, sym, ids, lb, _exact) in self.weak:
-                if q in exact_cells or level == 0:
-                    continue
-                if level == 1 and lb < 2 and len(ids) > 3:
-                    continue
-                r, c = q
-                if (r, c) not in self.b.revealed:
-                    continue
-                if not any(p not in self.b.revealed for p in self.b.shape_cells(q, ids)):
-                    continue
-                x0, y0 = c * s, r * s
-                cv.create_text(x0 + s - 3, y0 + 3, text=DISP.get(sym, sym) + str(lb),
-                               anchor="ne", fill="#b06a00",
-                               font=("Noto Sans CJK SC", max(7, int(s * 0.27))))
             drawn = set()
-            for (q, sym, ids, lb) in self.hints:
+            level = {"精简": 0, "标准": 1, "全部": 2}.get(self.density.get(), 1)
+            for (q, sym, ids, lb, exact) in self.weak:
                 r, c = q
                 if (r, c) not in self.b.revealed or q in drawn:
                     continue
-                drawn.add(q)
+                if not any(p not in self.b.revealed for p in self.b.shape_cells(q, ids)):
+                    continue
+                if level == 0 and not exact:
+                    continue
+                if level == 1 and not exact and lb < 2:
+                    continue
                 x0, y0 = c * s, r * s
-                cv.create_text(x0 + s - 4, y0 + s - 6, text=DISP.get(sym, sym) + str(lb),
+                txt = DISP.get(sym, sym) + str(lb)
+                font = ("Noto Sans CJK SC", max(7, int(s * 0.27)))
+                if exact:
+                    cv.create_text(x0 + s - 3, y0 + s - 3, text=txt, anchor="se",
+                                   fill="#2f6fa8", font=font)
+                else:
+                    cv.create_text(x0 + s - 3, y0 + 3, text=txt, anchor="ne",
+                                   fill="#b06a00", font=font)
+                drawn.add(q)
+            for (q, sym, ids, lb) in self.hints:
+                if q in drawn or q not in self.b.revealed:
+                    continue
+                r, c = q
+                x0, y0 = c * s, r * s
+                cv.create_text(x0 + s - 3, y0 + s - 3, text=DISP.get(sym, sym) + str(lb),
                                anchor="se", fill="#2f6fa8",
-                               font=("Noto Sans CJK SC", max(7, int(s * 0.28))))
+                               font=("Noto Sans CJK SC", max(7, int(s * 0.27))))
+                drawn.add(q)
         left = self.mines - len(self.flags)
         if self.dead:
             msg = "踩雷了 —— 按新局再来"

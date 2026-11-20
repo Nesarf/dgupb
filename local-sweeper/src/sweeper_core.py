@@ -116,8 +116,9 @@ class B:
         return False
 
     def weak_hints(self):
-        """每个已开数字格挑一条「至少 n 颗」的弱提示（非精确），只用于显示。
-        选形状时对已经用过的符号减分，让整局符号尽量分散。"""
+        """每个已开数字格挑一条形状提示。同时算下界与上界：
+        下界 == 上界 → 精确（共有 n 颗）；否则是「至少 n 颗」。
+        信息量优先，符号重复只作为平局时的轻微减分。"""
         out = []
         used = {}
         for q in self.revealed:
@@ -128,18 +129,28 @@ class B:
             best = None
             for sym, ids in SHAPES.items():
                 cells = self.shape_cells(q, ids)
+                cellset = set(cells)
                 unk = [p for p in cells if self.unk(p)]
                 if not unk:
                     continue
-                outside = sum(1 for p in self.nb(*q) if p not in cells and self.unk(p))
+                outside = sum(1 for p in self.nb(*q) if p not in cellset and self.unk(p))
                 lb = max(0, base - outside)
-                if 1 <= lb < len(unk):
-                    score = lb * 10 - len(unk) - used.get(sym, 0) * 3
-                    if best is None or score > best[0]:
-                        best = (score, sym, ids, lb)
+                outer = 0
+                for q2 in self.nb(*q):
+                    if q2 not in self.revealed or self.num(*q2) == 0:
+                        continue
+                    inner = sum(1 for p in self.nb(*q2) if p in cellset and self.unk(p))
+                    outer = max(outer, self.rest(q2) - inner)
+                ub = max(lb, base - outer)
+                exact = (lb == ub)
+                if not exact and lb < 1:
+                    continue
+                score = (100 if exact else 0) + lb * 10 - len(unk) - used.get(sym, 0)
+                if best is None or score > best[0]:
+                    best = (score, sym, ids, lb, exact)
             if best:
                 used[best[1]] = used.get(best[1], 0) + 1
-                out.append((q, best[1], best[2], best[3], False))
+                out.append((q, best[1], best[2], best[3], best[4]))
         return out
 
     def candidates(self):
