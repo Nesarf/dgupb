@@ -158,6 +158,7 @@ class App:
         if (r, c) in self.flags or (r, c) in self.b.revealed:
             return
         self.b.open(r, c)
+        self.weak = self.b.weak_hints()
         if self.b.dead:
             self.dead = True
             self.running = False
@@ -209,10 +210,12 @@ class App:
                 cv.create_text(x0 + s - 3, y0 + 3, text=DISP.get(sym, sym) + str(lb),
                                anchor="ne", fill="#b06a00",
                                font=("Noto Sans CJK SC", max(7, int(s * 0.27))))
+            drawn = set()
             for (q, sym, ids, lb) in self.hints:
                 r, c = q
-                if (r, c) not in self.b.revealed:
+                if (r, c) not in self.b.revealed or q in drawn:
                     continue
+                drawn.add(q)
                 x0, y0 = c * s, r * s
                 cv.create_text(x0 + s - 4, y0 + s - 6, text=DISP.get(sym, sym) + str(lb),
                                anchor="se", fill="#2f6fa8",

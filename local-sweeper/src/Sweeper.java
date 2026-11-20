@@ -189,6 +189,7 @@ public class Sweeper extends JFrame {
 
         ArrayList<Hint> weakHints() {
             ArrayList<Hint> out = new ArrayList<>();
+            HashMap<String,Integer> used = new HashMap<>();
             for (int q = 0; q < R*C; q++) {
                 if (!rev[q] || num(q) == 0) continue;
                 int base = rest(q);
@@ -203,7 +204,7 @@ public class Sweeper extends JFrame {
                     for (int p : nbs(q)) if (!set.contains(p) && unk(p)) outside++;
                     int lb = Math.max(0, base - outside);
                     if (lb >= 1 && lb < un) {
-                        int score = lb * 10 - un;
+                        int score = lb * 10 - un - used.getOrDefault(key, 0) * 3;
                         if (score > bestScore) {
                             bestScore = score;
                             best = new Hint();
@@ -211,7 +212,10 @@ public class Sweeper extends JFrame {
                         }
                     }
                 }
-                if (best != null) out.add(best);
+                if (best != null) {
+                    used.put(best.key, used.getOrDefault(best.key, 0) + 1);
+                    out.add(best);
+                }
             }
             return out;
         }
@@ -445,6 +449,7 @@ public class Sweeper extends JFrame {
             }
             if (board.rev[i] || board.flag[i] || board.dead) return;
             board.open(i);
+            weak = board.weakHints();
             if (board.revCount() == R*C - M) for (int k = 0; k < R*C; k++) if (board.mine[k]) board.flag[k] = true;
             repaint(); updateCounters();
         }
@@ -517,8 +522,11 @@ public class Sweeper extends JFrame {
                 g.setColor(new Color(0xB0, 0x6A, 0x00));
                 g.drawString(txt, x + cell - 3 - fmw.stringWidth(txt), y + 11);
             }
+            HashSet<Integer> drawn = new HashSet<>();
             for (Hint h : hints) {
                 if (!board.rev[h.i]) continue;
+                if (drawn.contains(h.i)) continue;
+                drawn.add(h.i);
                 ArrayList<Integer> cells = new ArrayList<>();
                 for (int p : board.shapeCells(h.i, h.key)) if (!board.rev[p]) cells.add(p);
                 if (cells.isEmpty()) continue;

@@ -116,8 +116,10 @@ class B:
         return False
 
     def weak_hints(self):
-        """每个已开数字格挑一条「至少 n 颗」的弱提示（非精确），只用于显示。"""
+        """每个已开数字格挑一条「至少 n 颗」的弱提示（非精确），只用于显示。
+        选形状时对已经用过的符号减分，让整局符号尽量分散。"""
         out = []
+        used = {}
         for q in self.revealed:
             v = self.num(*q)
             if v == 0:
@@ -132,10 +134,11 @@ class B:
                 outside = sum(1 for p in self.nb(*q) if p not in cells and self.unk(p))
                 lb = max(0, base - outside)
                 if 1 <= lb < len(unk):
-                    key = (-lb, len(unk))
-                    if best is None or key < best[0]:
-                        best = (key, sym, ids, lb)
+                    score = lb * 10 - len(unk) - used.get(sym, 0) * 3
+                    if best is None or score > best[0]:
+                        best = (score, sym, ids, lb)
             if best:
+                used[best[1]] = used.get(best[1], 0) + 1
                 out.append((q, best[1], best[2], best[3], False))
         return out
 
