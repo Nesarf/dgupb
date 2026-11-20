@@ -45,3 +45,16 @@ websockify --web /usr/share/novnc 6080 127.0.0.1:5900 &
 ## 依赖
 
 面板本身无依赖；桌面版需要 JDK 或 tkinter。
+
+## Android APK
+
+`android/` 是一个最小的 WebView 工程：清单 + `MainActivity` + 内嵌的 `assets/sweeper.html`。
+不申请任何权限，也不联网。
+
+```sh
+cd android
+./build.sh      # aapt2 -> javac -> d8 -> zip -> apksigner
+```
+
+需要 `android.jar`、`d8.jar`、`apksigner.jar` 与系统 `aapt2`；脚本里用 `SDK` 变量指向它们。
+产物约 25 KB，签名后即可安装。
