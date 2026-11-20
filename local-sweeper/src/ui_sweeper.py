@@ -196,7 +196,10 @@ class App:
                                           fill="#d64045", outline="")
                         cv.create_line(cx - 7, cy - 9, cx - 7, cy + 11, fill="#6b7a88", width=2)
         if self.show_hints.get():
+            exact_cells = {h[0] for h in self.hints}
             for (q, sym, ids, lb, _exact) in self.weak:
+                if q in exact_cells:
+                    continue
                 r, c = q
                 if (r, c) not in self.b.revealed:
                     continue

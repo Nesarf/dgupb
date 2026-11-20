@@ -505,6 +505,9 @@ public class Sweeper extends JFrame {
             FontMetrics fmw = g.getFontMetrics();
             for (Hint h : weak) {
                 if (!board.rev[h.i]) continue;
+                boolean exactHere = false;
+                for (Hint h2 : hints) if (h2.i == h.i) { exactHere = true; break; }
+                if (exactHere) continue;
                 boolean any = false;
                 for (int p : board.shapeCells(h.i, h.key)) if (!board.rev[p]) any = true;
                 if (!any) continue;
