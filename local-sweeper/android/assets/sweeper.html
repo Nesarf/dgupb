@@ -513,6 +513,14 @@ function chordAt(i){
 }
 
 let pressTimer=null, pressCell=null, longFired=false;
+
+function toggleFlagAt(i){
+  if(!board || board.rev.has(i) || board.dead) return;
+  snapshot();
+  if(board.flag.has(i)) board.flag.delete(i); else board.flag.add(i);
+  draw();
+  stat.textContent = `剩余 ${M-board.flag.size} · ${((Date.now()-startedAt)/1000)|0}s`;
+}
 let dragging=false, dragStartX=0, dragStartY=0, dragScrollL=0, dragScrollT=0;
 let pinchDist=0, pinchZoom=1, multiTouch=false;
 
@@ -548,6 +556,13 @@ document.getElementById('wrap').addEventListener('touchend', e=>{
 
 cv.addEventListener('pointerdown', ev=>{
   if(!board) return;
+  if(ev.pointerType === 'mouse'){
+    const mi = hit(ev);
+    if(mi === null) return;
+    if(ev.button === 2){ ev.preventDefault(); toggleFlagAt(mi); return; }   // 右键插旗
+    if(ev.button === 1){ ev.preventDefault(); chordAt(mi); return; }        // 中键排查
+    // 左键继续走下面的翻开逻辑
+  }
   if(!ev.isPrimary){ clearTimeout(pressTimer); multiTouch=true; return; }
   const i=hit(ev); if(i===null) return;
   pressCell=i; longFired=false; dragging=false;
@@ -557,7 +572,7 @@ cv.addEventListener('pointerdown', ev=>{
   dragScrollL=wrapEl.scrollLeft; dragScrollT=wrapEl.scrollTop;
   pressTimer=setTimeout(()=>{
     longFired=true;
-    if(!board.rev.has(i)){ snapshot(); board.flag.has(i)?board.flag.delete(i):board.flag.add(i); draw(); }
+    toggleFlagAt(i);
   }, 420);
 });
 cv.addEventListener('pointermove', ev=>{
