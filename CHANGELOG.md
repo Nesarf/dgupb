@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.12.0 - 2026-11-25
+
+- New `devkit/android-cc`: a toolchain that runs natively on an aarch64 device
+  and still emits Android native libraries. The NDK's clang is x86_64-only and
+  qemu needs an amd64 glibc the device does not have, so this pairs Zig (native
+  aarch64, knows the Android ABI) with the NDK's sysroot, which is pure data.
+- New `devkit/ffbuild`: targeted ffmpeg builds using that toolchain, with
+  `fix-config.py` correcting the platform macros cross detection gets wrong and
+  the link line stripped of dxgi/d3d11/d3d12/atomic stubs that only exist as
+  Windows placeholders in the sysroot.
+
 ## v0.11.0 - 2026-11-25
 
 - Drop the surface around `devkit`. The C bridge, the web console and the
