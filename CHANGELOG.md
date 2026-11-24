@@ -7,7 +7,8 @@
   whitelist (no shell chaining) that any client on the phone can call;
   `bin/apkbuild` turns a plain Java Android project into a signed APK through
   aapt2 + d8 + apksigner with no Gradle and no Android Studio; `bin/devkit-run`
-  starts, stops and reports on the bridge. Build the binary with `make -C devkit`.
+  starts, stops and reports on the bridge; `bin/newproj` scaffolds a project with a
+  generated keystore that apkbuild compiles as-is. Build the binary with `make -C devkit`.
 - New `local-devkit` plugin: panel showing bridge state, port, pid and whether
   aapt2 / d8 / apksigner / android.jar are ready, with start / stop actions.
 

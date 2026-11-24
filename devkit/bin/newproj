@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# newproj — scaffold a plain Java Android project that apkbuild can compile.
+set -euo pipefail
+
+NAME=""; DIR=""; PKG=""; MIN_SDK=29; TARGET_SDK=34
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -p|--package) PKG="$2"; shift 2 ;;
+    -d|--dir) DIR="$2"; shift 2 ;;
+    --min-sdk) MIN_SDK="$2"; shift 2 ;;
+    --target-sdk) TARGET_SDK="$2"; shift 2 ;;
+    -h|--help) sed -n '2,6p' "$0"; exit 0 ;;
+    *) NAME="$1"; shift ;;
+  esac
+done
+[ -n "$NAME" ] || { echo "usage: newproj <name> [-p package] [-d dir]" >&2; exit 2; }
+
+PKG="${PKG:-com.dgupb.${NAME//[^a-zA-Z0-9]/}}"
+DIR="${DIR:-$PWD/$NAME}"
+[ -e "$DIR" ] && { echo "newproj: $DIR already exists" >&2; exit 2; }
+
+PKGPATH="${PKG//.//}"
+JDK="${JDK_HOME:-/usr/lib/jvm/java-21-openjdk-arm64}"
+[ -x "$JDK/bin/keytool" ] || JDK="$(dirname "$(dirname "$(readlink -f "$(command -v javac)")")")"
+
+mkdir -p "$DIR/src/$PKGPATH" "$DIR/res/values"
+cat > "$DIR/AndroidManifest.xml" <<EOF
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="$PKG" android:versionCode="1" android:versionName="0.1">
+    <uses-sdk android:minSdkVersion="$MIN_SDK" android:targetSdkVersion="$TARGET_SDK" />
+    <application android:label="@string/app_name">
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+EOF
+cat > "$DIR/res/values/strings.xml" <<EOF
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">$NAME</string>
+</resources>
+EOF
+cat > "$DIR/src/$PKGPATH/MainActivity.java" <<EOF
+package $PKG;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.widget.TextView;
+
+public class MainActivity extends Activity {
+    @Override
+    protected void onCreate(Bundle state) {
+        super.onCreate(state);
+        TextView t = new TextView(this);
+        t.setText("$NAME");
+        t.setTextSize(24);
+        t.setPadding(48, 96, 48, 48);
+        setContentView(t);
+    }
+}
+EOF
+"$JDK/bin/keytool" -genkeypair -keystore "$DIR/debug.keystore" -alias dsh \
+  -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+  -dname "CN=DSH, O=DSH, C=CN" >/dev/null 2>&1
+
+echo "created $DIR"
+echo "  package: $PKG"
+echo "  build:   $(dirname "$(readlink -f "$0")")/apkbuild $DIR"

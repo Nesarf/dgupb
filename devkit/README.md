@@ -9,6 +9,17 @@
 | `bin/devkit-bridge` | C | 只监听 127.0.0.1 的 HTTP 桥，白名单命令执行，返回 JSON |
 | `bin/apkbuild` | bash + Java 工具 | 一个 Java 项目目录进，一个签名 APK 出 |
 | `bin/devkit-run` | bash | 桥的 start / stop / restart / status / log |
+| `bin/newproj` | bash + keytool | 生成一个 apkbuild 能直接编的项目骨架 |
+
+## newproj
+
+```sh
+devkit/bin/newproj demo -p com.dgupb.demo      # 生成到 ./demo
+devkit/bin/apkbuild demo                       # 直接出签名包
+```
+
+生成 `AndroidManifest.xml`、`res/values/strings.xml`、`src/<包>/MainActivity.java` 和一把
+`debug.keystore`（RSA 2048，口令 android，别名 dsh）。两步就能从零拿到一个能装的 APK。
 
 ## apkbuild
 
