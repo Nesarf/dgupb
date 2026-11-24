@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.11.0 - 2026-11-25
+
+- Drop the surface around `devkit`. The C bridge, the web console and the
+  `local-devkit` panel are gone: the only consumer of these tools is the agent
+  that already has a shell, so an HTTP hop and a UI were pure overhead. What is
+  left is `devkit/bin/apkbuild` and `devkit/bin/newproj`, headless scripts you
+  call and forget. `devkit/README.md` records why.
+
 ## v0.10.0 - 2026-11-25
 
 - New `devkit/`: a local toolchain for dsh-go with C and Java at the core.

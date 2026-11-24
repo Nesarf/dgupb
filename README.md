@@ -21,7 +21,6 @@ dsh-go useful plugin bundle：一组本地 dsh-go 原生插件，给手机 App �
 | `local-volcano` | 宿主观察：进程、负载、内存、磁盘 | 无 |
 | `local-lineweight` | 线稿：LineWeight 生成带笔压的矢量线稿 | LineWeight 仓库 + Python |
 | `local-sweeper` | 扫雷：字符画棋盘 + 形状提示统计，桌面版在 src/ | 无 |
-| `local-devkit` | 开发工具：桥接站状态、构建链就绪情况，一键启停 | `devkit/`（gcc 编译） |
 
 ## 安装
 
@@ -46,7 +45,7 @@ dgupb/
   install.sh             批量安装脚本
   assets/icon.jpg        项目图标
   local-dsh-ime/         各插件一个目录
-  devkit/                C 桥接站 + apkbuild 工具链（被 local-devkit 面板调用）
+  devkit/                内部构建脚本：apkbuild / newproj，无服务无界面
   ...
 ```
 
