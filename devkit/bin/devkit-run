@@ -13,10 +13,15 @@ is_up() {
 case "${1:-status}" in
   start)
     if is_up; then echo "already running (pid $(cat "$PIDF")) on :$PORT"; exit 0; fi
-    nohup "$DIR/bin/devkit-bridge" "$PORT" >>"$LOG" 2>&1 &
+    setsid nohup "$DIR/bin/devkit-bridge" "$PORT" >>"$LOG" 2>&1 &
     echo $! >"$PIDF"
-    sleep 0.4
-    if is_up; then echo "started pid $(cat "$PIDF") on http://127.0.0.1:$PORT"; else echo "failed, see $LOG" >&2; exit 1; fi
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+      sleep 0.2
+      if curl -s --max-time 1 "http://127.0.0.1:$PORT/status" >/dev/null 2>&1; then
+        echo "started pid $(cat "$PIDF") on http://127.0.0.1:$PORT"; exit 0
+      fi
+    done
+    echo "failed, see $LOG" >&2; tail -3 "$LOG" >&2; exit 1
     ;;
   stop)
     if is_up; then kill "$(cat "$PIDF")" 2>/dev/null && echo "stopped"; else echo "not running"; fi
