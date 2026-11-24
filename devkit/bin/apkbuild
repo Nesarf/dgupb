@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# apkbuild — one command to turn a Java Android project into a signed APK,
+# without Gradle. Pipeline: aapt2 compile -> aapt2 link -> javac -> d8 ->
+# zip (resources.arsc first) -> apksigner.
+set -euo pipefail
+
+PROJ=""; OUT=""; KS=""; KS_PASS="android"; KS_ALIAS="dsh"; MIN_SDK=29; TARGET_SDK=34
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -o) OUT="$2"; shift 2 ;;
+    -k) KS="$2"; shift 2 ;;
+    -p) KS_PASS="$2"; shift 2 ;;
+    -a) KS_ALIAS="$2"; shift 2 ;;
+    --min-sdk) MIN_SDK="$2"; shift 2 ;;
+    --target-sdk) TARGET_SDK="$2"; shift 2 ;;
+    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+    *) PROJ="$1"; shift ;;
+  esac
+done
+
+[ -n "$PROJ" ] || { echo "apkbuild: needs a project directory" >&2; exit 2; }
+PROJ="$(cd "$PROJ" && pwd)"
+[ -f "$PROJ/AndroidManifest.xml" ] || { echo "apkbuild: no AndroidManifest.xml in $PROJ" >&2; exit 2; }
+
+AJ="${ANDROID_JAR:-/opt/android-sdk/pf/android-34/android.jar}"
+AAPT2="${AAPT2:-/usr/bin/aapt2}"
+R8JAR="${R8_JAR:-/opt/r8/r8.jar}"
+SIGNER="${APKSIGNER_JAR:-/opt/android-sdk/bt/android-14/lib/apksigner.jar}"
+JDK="${JDK_HOME:-/usr/lib/jvm/java-21-openjdk-arm64}"
+[ -x "$JDK/bin/javac" ] || JDK="$(dirname "$(dirname "$(readlink -f "$(command -v javac)")")")"
+
+for t in "$AJ" "$AAPT2" "$R8JAR" "$SIGNER"; do
+  [ -e "$t" ] || { echo "apkbuild: missing $t" >&2; exit 2; }
+done
+
+B="$PROJ/build"; rm -rf "$B/gen" "$B/classes" "$B/dex"; mkdir -p "$B/gen" "$B/classes" "$B/dex"
+
+# 1) resources: precompiled res.zip wins, otherwise compile res/
+RESARG=()
+if [ -f "$PROJ/res.zip" ]; then
+  RESARG=(-R "$PROJ/res.zip")
+elif [ -d "$PROJ/res" ]; then
+  "$AAPT2" compile --dir "$PROJ/res" -o "$B/res.zip" >/dev/null
+  RESARG=(-R "$B/res.zip")
+fi
+
+# 2) link: produces the base APK and R.java
+"$AAPT2" link -o "$B/base.apk" -I "$AJ" --manifest "$PROJ/AndroidManifest.xml" \
+  "${RESARG[@]}" --auto-add-overlay --java "$B/gen" \
+  --min-sdk-version "$MIN_SDK" --target-sdk-version "$TARGET_SDK"
+
+# 3) java -> class
+CP="$AJ"
+EXTRA_CP=()
+if [ -d "$PROJ/libs" ]; then
+  for j in "$PROJ"/libs/*.jar; do [ -e "$j" ] && EXTRA_CP+=("$j"); done
+fi
+[ ${#EXTRA_CP[@]} -gt 0 ] && CP="$CP:$(IFS=:; echo "${EXTRA_CP[*]}")"
+
+SRC=()
+while IFS= read -r f; do SRC+=("$f"); done < <(find "$PROJ/src" -name '*.java' 2>/dev/null | sort)
+while IFS= read -r f; do SRC+=("$f"); done < <(find "$B/gen" -name '*.java' 2>/dev/null | sort)
+[ ${#SRC[@]} -gt 0 ] || { echo "apkbuild: no .java sources" >&2; exit 2; }
+
+"$JDK/bin/javac" -nowarn -source 11 -target 11 -encoding UTF-8 -cp "$CP" -d "$B/classes" "${SRC[@]}" 2>&1 \
+  | grep -vE 'obsolete|bootstrap class path|deprecat|^[0-9]+ warning' || true
+[ -n "$(find "$B/classes" -name '*.class' -print -quit)" ] || { echo "apkbuild: javac produced nothing" >&2; exit 1; }
+
+# 4) class -> dex
+mapfile -t CLASSES < <(find "$B/classes" -name '*.class')
+DEXIN=("${CLASSES[@]}")
+[ ${#EXTRA_CP[@]} -gt 0 ] && DEXIN+=("${EXTRA_CP[@]}")
+"$JDK/bin/java" -cp "$R8JAR" com.android.tools.r8.D8 --lib "$AJ" --min-api "$MIN_SDK" \
+  --output "$B/dex" "${DEXIN[@]}"
+
+# 5) repack: resources.arsc must be first and 4-byte aligned
+python3 - "$B" "$PROJ" <<'PY'
+import os, sys, zipfile
+b, proj = sys.argv[1], sys.argv[2]
+src = zipfile.ZipFile(os.path.join(b, 'base.apk'))
+names = src.namelist()
+rest = [n for n in names if n not in ('resources.arsc', 'AndroidManifest.xml')]
+order = ['resources.arsc', 'AndroidManifest.xml'] + rest
+outp = os.path.join(b, 'aligned.apk')
+with zipfile.ZipFile(outp, 'w') as out:
+    for name in order:
+        data = src.read(name)
+        zi = zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0))
+        zi.compress_type = zipfile.ZIP_STORED if name == 'resources.arsc' else zipfile.ZIP_DEFLATED
+        zi.external_attr = 0o644 << 16
+        out.writestr(zi, data)
+    dex = os.path.join(b, 'dex', 'classes.dex')
+    if os.path.exists(dex):
+        zi = zipfile.ZipInfo('classes.dex', date_time=(2026, 1, 1, 0, 0, 0))
+        zi.compress_type = zipfile.ZIP_DEFLATED
+        zi.external_attr = 0o644 << 16
+        out.writestr(zi, open(dex, 'rb').read())
+    libroot = os.path.join(proj, 'lib')
+    if os.path.isdir(libroot):
+        for abi in sorted(os.listdir(libroot)):
+            d = os.path.join(libroot, abi)
+            if not os.path.isdir(d):
+                continue
+            for fn in sorted(os.listdir(d)):
+                if not fn.endswith('.so'):
+                    continue
+                zi = zipfile.ZipInfo('lib/%s/%s' % (abi, fn), date_time=(2026, 1, 1, 0, 0, 0))
+                zi.compress_type = zipfile.ZIP_DEFLATED
+                zi.external_attr = 0o644 << 16
+                out.writestr(zi, open(os.path.join(d, fn), 'rb').read())
+PY
+
+# 6) sign
+OUT="${OUT:-$PROJ/build/app-signed.apk}"
+if [ -z "$KS" ] && [ -f "$PROJ/debug.keystore" ]; then KS="$PROJ/debug.keystore"; fi
+if [ -n "$KS" ]; then
+  "$JDK/bin/java" -jar "$SIGNER" sign --ks "$KS" --ks-pass "pass:$KS_PASS" \
+    --key-pass "pass:$KS_PASS" --out "$OUT" "$B/aligned.apk"
+else
+  cp "$B/aligned.apk" "$OUT"
+  echo "apkbuild: unsigned (no keystore given)" >&2
+fi
+
+echo "built: $OUT ($(du -h "$OUT" | cut -f1))"

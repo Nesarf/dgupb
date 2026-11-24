@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.10.0 - 2026-11-25
+
+- New `devkit/`: a local toolchain for dsh-go with C and Java at the core.
+  `bin/devkit-bridge` is a C HTTP bridge bound to 127.0.0.1 with a command
+  whitelist (no shell chaining) that any client on the phone can call;
+  `bin/apkbuild` turns a plain Java Android project into a signed APK through
+  aapt2 + d8 + apksigner with no Gradle and no Android Studio; `bin/devkit-run`
+  starts, stops and reports on the bridge. Build the binary with `make -C devkit`.
+- New `local-devkit` plugin: panel showing bridge state, port, pid and whether
+  aapt2 / d8 / apksigner / android.jar are ready, with start / stop actions.
+
 ## v0.9.0 - 2026-11-21
 
 - `local-sweeper`: new plugin. Minesweeper panel with an ASCII board and shape-hint stats;
