@@ -30,6 +30,7 @@ static const char *ALLOW[] = {
 
 static time_t g_started;
 static int g_port = PORT_DEFAULT;
+static char g_share[512] = "";
 
 static int tool_allowed(const char *n) {
     for (int i = 0; ALLOW[i]; i++)
@@ -229,6 +230,20 @@ static const char *INDEX_HTML =
 "<li><code>GET /run?cmd=uname&amp;arg=-a</code> 执行白名单命令</li></ul>"
 "<p>示例：<code>curl 'http://127.0.0.1:8737/run?cmd=df&amp;arg=-h'</code></p>";
 
+static void handle_console(int fd) {
+    char path[1024];
+    snprintf(path, sizeof path, "%s/console.html", g_share);
+    FILE *f = fopen(path, "rb");
+    if (!f) { respond(fd, 200, "text/html; charset=utf-8", INDEX_HTML); return; }
+    char *buf = malloc(262144);
+    if (!buf) { fclose(f); respond(fd, 500, "text/plain", "oom"); return; }
+    size_t n = fread(buf, 1, 262143, f);
+    fclose(f);
+    buf[n] = 0;
+    respond(fd, 200, "text/html; charset=utf-8", buf);
+    free(buf);
+}
+
 static void handle_client(int fd) {
     char req[MAX_REQ];
     ssize_t n = read(fd, req, sizeof req - 1);
@@ -247,7 +262,7 @@ static void handle_client(int fd) {
     if (q) { *q = 0; snprintf(query, sizeof query, "%s", q + 1); }
     snprintf(path, sizeof path, "%s", target);
 
-    if (strcmp(path, "/") == 0) respond(fd, 200, "text/html; charset=utf-8", INDEX_HTML);
+    if (strcmp(path, "/") == 0 || strcmp(path, "/console") == 0) handle_console(fd);
     else if (strcmp(path, "/status") == 0) handle_status(fd);
     else if (strcmp(path, "/run") == 0) handle_run(fd, query);
     else respond(fd, 404, "application/json", "{\"ok\":false,\"error\":\"not found\"}");
@@ -267,6 +282,18 @@ int main(int argc, char **argv) {
     snprintf(path, sizeof path, "/root/workspace/dgupb/devkit/bin:%s", old ? old : "/usr/local/bin:/usr/bin:/bin");
     setenv("PATH", path, 1);
 
+    /* share/ sits next to bin/: <root>/bin/devkit-bridge -> <root>/share */
+    {
+        char exe[1024];
+        ssize_t k = readlink("/proc/self/exe", exe, sizeof exe - 1);
+        if (k > 0) {
+            exe[k] = 0;
+            char *slash = strrchr(exe, '/');
+            if (slash) { *slash = 0; snprintf(g_share, sizeof g_share, "%s/../share", exe); }
+        }
+        if (!g_share[0]) snprintf(g_share, sizeof g_share, "%s", "share");
+    }
+
     g_started = time(NULL);
 
     int srv = socket(AF_INET, SOCK_STREAM, 0);
@@ -282,6 +309,15 @@ int main(int argc, char **argv) {
 
     if (bind(srv, (struct sockaddr *)&a, sizeof a) < 0) { perror("bind"); return 1; }
     if (listen(srv, 16) < 0) { perror("listen"); return 1; }
+
+    /* Whoever spawned us may only see the wrapper's pid; record the real one. */
+    {
+        const char *pf = getenv("DEVKIT_PIDFILE");
+        if (pf && *pf) {
+            FILE *p = fopen(pf, "w");
+            if (p) { fprintf(p, "%d\n", (int)getpid()); fclose(p); }
+        }
+    }
 
     fprintf(stderr, "devkit bridge %s on http://127.0.0.1:%d (pid %d)\n", VERSION, g_port, (int)getpid());
 
