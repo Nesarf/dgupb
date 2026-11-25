@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.13.0 - 2026-11-26
+
+- `devkit/ffbuild` can now ship ffmpeg inside an Android app. Four things had to be
+  right or the result simply would not `dlopen`: a `DT_SONAME` (manual links have
+  none), `libc.so` actually listed in NEEDED (Zig's `-lc` gets dropped by
+  `--as-needed`, after which `stdout` and `longjmp` cannot resolve), every static
+  library built with `-fPIC` (aarch64 `adrp/add` relocations otherwise fail), and
+  `-Bsymbolic` to stop ffmpeg's internal tables from being preempted.
+- New `build-x264.sh` and `link-shared.sh`. The CLI is compiled as a library
+  (`main` renamed to `ffmpeg_main`) because Android refuses to execute binaries
+  from app data, then wrapped by `jni_glue.c`, which also supplies `stdout` /
+  `stderr` since bionic keeps them inside its private `__sF` array.
+- Targeting is tighter now: only what a recorder needs, plus libx264 for real
+  H.264 software encoding instead of the built-in mpeg4 fallback.
+
 ## v0.12.0 - 2026-11-25
 
 - New `devkit/android-cc`: a toolchain that runs natively on an aarch64 device

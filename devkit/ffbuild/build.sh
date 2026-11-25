@@ -23,25 +23,31 @@ if [ ! -d "$SRC" ]; then
 fi
 
 cd "$SRC"
+# ffmpeg 的 CLI 入口改成普通函数，JNI 才能直接调它而不是启动一个进程
+sed -i 's/^int main(int argc, char \*\*argv)/int ffmpeg_main(int argc, char **argv)/' fftools/ffmpeg.c
+
 ./configure \
   --target-os=android --arch=aarch64 --enable-cross-compile \
   --cc="$CC_DIR/zigcc" --cxx="$CC_DIR/zigcxx" \
   --ar="$CC_DIR/zigar" --ranlib="$CC_DIR/zigranlib" --strip="$CC_DIR/zigstrip" \
-  --prefix="$PREFIX" --enable-shared --disable-static \
-  --disable-programs --disable-doc --disable-debug \
+  --prefix="$PREFIX" --enable-static --disable-shared --enable-pic \
+  --enable-ffmpeg --disable-ffprobe --disable-ffplay --disable-doc --disable-debug \
   --disable-avdevice --disable-postproc --disable-network --disable-autodetect \
   --disable-hwaccels --disable-vdpau --disable-vulkan --disable-cuda-llvm \
   --disable-cuvid --disable-nvdec --disable-nvenc --disable-vaapi \
   --disable-d3d11va --disable-dxva2 --disable-v4l2-m2m --disable-mediacodec \
   --disable-jni --disable-videotoolbox --disable-audiotoolbox \
   --disable-everything \
+  --enable-gpl --enable-libx264 \
+  --extra-cflags="-I$DEPS/include" \
+  --extra-ldflags="-L$DEPS/lib" \
   --enable-decoder=aac,h264,hevc,mp3,opus,vorbis,flac,pcm_s16le,pcm_s16be \
-  --enable-encoder=aac,flac,pcm_s16le \
+  --enable-encoder=libx264,aac,flac,pcm_s16le \
   --enable-demuxer=matroska,mov,mp3,wav,flac,ogg,aac,image2 \
   --enable-muxer=matroska,mp4,wav,flac,ogg,adts \
   --enable-parser=aac,h264,hevc,mpegaudio,opus,vorbis,flac \
   --enable-protocol=file,pipe \
-  --enable-filter=aresample,anull,format,null,scale,transpose \
+  --enable-filter=aresample,anull,format,null,scale,transpose,fade,afade,volume,atempo,setpts \
   --enable-bsf=aac_adtstoasc,h264_mp4toannexb,hevc_mp4toannexb,extract_extradata \
   --enable-swresample --enable-swscale \
   "$@"
@@ -64,3 +70,6 @@ ls -lh "$PREFIX"/lib/*.so* 2>/dev/null | awk '{print "  ", $9, $5}'
 echo
 echo "copy them into your APK as lib/arm64-v8a/, stored uncompressed and"
 echo "page aligned, with android:extractNativeLibs=\"false\"."
+
+# 静态库齐了之后，链接成单个可被 JNI 加载的共享库
+bash "$HERE/link-shared.sh"
